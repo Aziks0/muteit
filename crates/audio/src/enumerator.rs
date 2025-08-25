@@ -1,0 +1,224 @@
+use std::fmt::Display;
+use std::ops::Deref;
+
+use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+use windows::Win32::Media::Audio::{
+    DEVICE_STATE_ACTIVE, IAudioSessionManager, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
+};
+use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
+use windows::core::{HRESULT, PCWSTR, PWSTR};
+
+use crate::{Device, Error, Result};
+
+/// Information about a device.
+///
+/// # Examples
+///
+/// Because it implements [`Display`], you can get its name easily.
+///
+/// ```ignore
+/// let enumerator = DeviceEnumerator::try_new()?;
+/// let information: &DeviceInformation = enumerator[0];
+///
+/// // Print its name like you print any value:
+/// println!("Your device is called {}", information)
+///
+/// // Modify a copy of its name:
+/// let lower_case_name = information.to_string().to_lowercase();
+///
+/// // Get a copy of its id:
+/// let id = information.get_id();
+/// ```
+pub struct DeviceInformation {
+    /// The unique identifier of the device.
+    id: PWSTR,
+    /// The name of the device.
+    name: String,
+}
+
+impl DeviceInformation {
+    /// Get the unique identifier of the device.
+    pub fn get_id(&self) -> String {
+        // PANICS: It should be impossible to get an ID from Windows with invalid UTF-16 characters.
+        // SAFETY: Windows gave us the pointer when calling `IMMDevice::GetId`, which also allocates
+        // the memory for us. We are responsible for freeing it, so the pointer should be valid
+        // until we drop `self`.
+        unsafe { self.id.to_string().unwrap() }
+    }
+}
+
+impl Display for DeviceInformation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
+impl Drop for DeviceInformation {
+    fn drop(&mut self) {
+        unsafe { CoTaskMemFree(Some(self.id.0 as *const _)) };
+    }
+}
+
+/// A list of audio devices.
+///
+/// This should be used to iterate over the available devices' information, but also to get one such
+/// device.
+///
+/// # Examples
+///
+/// You can iterate over the devices' information using `iter`:
+///
+/// ```ignore
+/// let enumerator = DeviceEnumerator::try_new()?;
+///
+/// for information in enumerator.iter() {
+///     println!("{}", information);
+/// }
+///
+/// ```
+///
+/// If you want to refresh the list of devices:
+///
+/// ```ignore
+/// let mut enumerator = DeviceEnumerator::try_new()?;
+///
+/// // Do some stuff...
+///
+/// enumerator.refresh();
+/// ```
+///
+/// And you can get a device:
+///
+/// ```ignore
+/// // Using the enumerator:
+/// let enumerator = DeviceEnumerator::try_new()?;
+/// let device = enumerator.get_device(&enumerator[0])?;
+///
+/// // Or, if you know the ID beforehand, you can directly get it:
+/// let device_id = String::from("...");
+/// let device = DeviceEnumerator::get_device_by_id(&device_id)?;
+/// ```
+pub struct DeviceEnumerator {
+    enumerator: IMMDeviceEnumerator,
+    endpoints: Vec<DeviceInformation>,
+}
+
+impl DeviceEnumerator {
+    /// Create a new list of audio devices.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let enumerator = DeviceEnumerator::try_new()?;
+    ///
+    /// // You can enumerate the devices' information:
+    /// for information in enumerator.iter() {
+    ///     // Print there friendly name:
+    ///     println!("{}", information);
+    /// }
+    ///
+    /// // And get the device you want:
+    /// let device = enumerator.get_device(&enumerator[0])?;
+    /// ```
+    ///
+    /// # Notes:
+    ///
+    /// COM has to be initialized for the calling thread before calling this method.
+    pub fn try_new() -> Result<Self> {
+        let enumerator: IMMDeviceEnumerator =
+            unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
+        let mut result = Self {
+            enumerator,
+            endpoints: Vec::new(),
+        };
+        result.refresh()?;
+        Ok(result)
+    }
+
+    /// Refresh the list of audio devices.
+    pub fn refresh(&mut self) -> Result<()> {
+        unsafe {
+            let endpoints = self
+                .enumerator
+                .EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE)?;
+
+            let count = endpoints.GetCount()?;
+            self.endpoints.clear();
+            self.endpoints.reserve_exact(count as usize);
+
+            for device_number in 0..count {
+                let device = endpoints.Item(device_number)?;
+
+                // Get a readable name for the device.
+                let property_store = device.OpenPropertyStore(STGM_READ)?;
+                let name = property_store
+                    .GetValue(&PKEY_Device_FriendlyName)?
+                    .to_string();
+
+                let id = device.GetId()?;
+
+                self.endpoints.push(DeviceInformation { id, name });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get a device.
+    ///
+    ///
+    /// # Examples
+    ///
+    /// You can get a reference to a device's information by dereferencing [`DeviceEnumerator`]:
+    ///
+    /// ```ignore
+    /// let enumerator = DeviceEnumerator::try_new()?;
+    ///
+    /// let device = enumerator.get_device(&enumerator[0]);
+    /// ```
+    pub fn get_device(&self, information: &DeviceInformation) -> Result<Device> {
+        get_device_by_id(&self.enumerator, information.id)
+    }
+
+    /// Get a device using its ID.
+    ///
+    /// # Notes:
+    ///
+    /// COM has to be initialized for the calling thread before calling this method.
+    pub fn get_device_by_id(id: &String) -> Result<Device> {
+        unsafe {
+            let enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+            let id: Vec<u16> = id.encode_utf16().chain(std::iter::once(0u16)).collect();
+            get_device_by_id(&enumerator, PCWSTR(id.as_ptr()))
+        }
+    }
+}
+
+impl Deref for DeviceEnumerator {
+    type Target = Vec<DeviceInformation>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.endpoints
+    }
+}
+
+fn get_device_by_id<P>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<Device>
+where
+    P: windows::core::Param<PCWSTR>,
+{
+    unsafe {
+        let device = enumerator.GetDevice(id).map_err(|err| {
+            // It is supposed to be `E_NOTFOUND`, but I couldn't find a reference to it in the
+            // source code. The value is also used for `PEER_E_NOT_FOUND` so I prefer to only
+            // check for this error for the `IMMDeviceEnumerator::GetDevice` method.
+            if err.code() == HRESULT(0x80070490_u32 as i32) {
+                Error::DeviceNotFound
+            } else {
+                Error::UnknownWindows(err)
+            }
+        })?;
+        let session_manager: IAudioSessionManager = device.Activate(CLSCTX_ALL, None)?;
+        Ok(Device::new(session_manager.GetSimpleAudioVolume(None, 0)?))
+    }
+}

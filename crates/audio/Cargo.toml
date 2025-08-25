@@ -8,4 +8,11 @@ thiserror = "2.0.16"
 
 [dependencies.windows]
 version = "0.61.3"
-features = ["Win32_Media_Audio"]
+features = [
+  "Win32_Devices_FunctionDiscovery",
+  "Win32_Media_Audio",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Com",
+  "Win32_System_Variant",
+  "Win32_UI_Shell_PropertiesSystem",
+]
