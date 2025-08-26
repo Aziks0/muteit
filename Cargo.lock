@@ -11,6 +11,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "coinit"
+version = "0.1.0"
+dependencies = [
+ "windows",
+]
+
+[[package]]
 name = "muteit"
 version = "0.1.0"
 

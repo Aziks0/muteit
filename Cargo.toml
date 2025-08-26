@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/audio", "crates/muteit"]
+members = ["crates/audio", "crates/coinit", "crates/muteit"]
 
 [workspace.dependencies.windows]
 version = "0.61.3"

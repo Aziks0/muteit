@@ -1,0 +1,10 @@
+[package]
+name = "coinit"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dependencies.windows]
+workspace = true
+features = ["Win32_System_Com"]
