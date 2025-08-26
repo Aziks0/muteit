@@ -1,3 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/audio", "crates/muteit"]
+
+[workspace.dependencies.windows]
+version = "0.61.3"
