@@ -132,3 +132,12 @@ mod test {
         assert!(result, "COM has not been uninitialized");
     }
 }
+
+// Really shitty way to test for failed compilation.
+/// ```compile_fail
+/// use coinit::CO;
+/// CO::<30>::init();
+/// ```
+#[doc(hidden)]
+#[allow(dead_code)]
+fn compile_fail() {}
