@@ -9,3 +9,4 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+dioxus = { version = "0.7.0-rc.0", features = ["desktop"] }

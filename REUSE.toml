@@ -8,3 +8,8 @@ version = 1
 path = "Cargo.lock"
 SPDX-FileCopyrightText = "2025 Benjamin DIDIER <contact@aziks.aleeas.com>"
 SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "crates/muteit/assets/tailwind.css"
+SPDX-FileCopyrightText = "Tailwind Labs, Inc."
+SPDX-License-Identifier = "MIT"
