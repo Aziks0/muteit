@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 use std::fmt::Display;
 use std::ops::Deref;
 

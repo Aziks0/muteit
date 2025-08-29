@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
 use windows::Win32::Foundation::CO_E_NOTINITIALIZED;
 use windows::Win32::Media::Audio::AUDCLNT_E_DEVICE_INVALIDATED;
 

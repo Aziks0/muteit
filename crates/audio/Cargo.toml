@@ -1,7 +1,12 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
 [package]
 name = "audio"
 version = "0.1.0"
 edition = "2024"
+license = "MPL-2.0"
 
 [dependencies]
 thiserror = "2.0.16"

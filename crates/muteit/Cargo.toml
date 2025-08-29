@@ -1,6 +1,11 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
 [package]
 name = "muteit"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-or-later"
 
 [dependencies]
