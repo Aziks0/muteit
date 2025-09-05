@@ -5,7 +5,7 @@
 use windows::Win32::Foundation::CO_E_NOTINITIALIZED;
 use windows::Win32::Media::Audio::AUDCLNT_E_DEVICE_INVALIDATED;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("COM has not been initialized for use by the current thread")]
     ComNotInitialized,
