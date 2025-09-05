@@ -3,22 +3,74 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod config;
+mod device_selector;
 
+use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::UserAttentionType;
 use dioxus::desktop::{Config, WindowBuilder, WindowCloseBehaviour, window};
 use dioxus::prelude::*;
 
-use crate::config::use_config;
+use audio::{Device, DeviceEnumerator};
+
+use crate::config::{DeviceInformation, use_config};
+use crate::device_selector::DeviceSelector;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 /// The main application component.
 #[component]
 fn App() -> Element {
-    let config = use_config()?;
+    let mut config = use_config()?;
+    let information = config.information.peek().clone();
 
-    rsx! {}
+    // We don't care about returning early, blah blah blah, hook, whatever. If we can't get a hold
+    // to the enumerator, something is **VERY** wrong, so just fail and ask the user to restart the
+    // app.
+    let enumerator =
+        use_hook(|| DeviceEnumerator::try_new().map(|enumerator| Signal::new(enumerator)))?;
+
+    let mut device = use_signal(|| {
+        config
+            .information
+            .peek()
+            .as_ref()
+            .map(|information| enumerator.peek().get_device(information.id.clone()))
+            .transpose()
+    });
+
+    use_effect(move || {
+        if let Err(ref err) = *device.read() {
+            throw_error(err.clone());
+        }
+    });
+
+    rsx! {
+        div { class: "flex h-screen items-center justify-center bg-blue-800 text-white",
+            div { class: "flex flex-col w-5/6 gap-2",
+                DeviceSelector {
+                    on_select: move |i: Option<u32>| {
+                        let new_device = i
+                            .map(|i| Device::try_from(&enumerator.peek()[i as usize]))
+                            .transpose();
+                        device.set(new_device);
+
+                        let information = i
+                            .map(|i| {
+                                let information = &enumerator.peek()[i as usize];
+                                DeviceInformation {
+                                    name: information.to_string(),
+                                    id: information.get_id(),
+                                }
+                            });
+                        config.information.set(information);
+                    },
+                    default: information,
+                    enumerator,
+                }
+            }
+        }
+    }
 }
 
 /// A version of the `App` component wrapped in an `ErrorBoundary`.

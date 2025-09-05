@@ -12,7 +12,7 @@ use dioxus_signals::Signal;
 use serde::{Deserialize, Serialize};
 
 /// Information about the device to control.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct DeviceInformation {
     /// Name of the device.
     pub name: String,
