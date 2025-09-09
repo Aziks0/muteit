@@ -129,14 +129,40 @@ impl DeviceEnumerator {
     ///
     /// COM has to be initialized for the calling thread before calling this method.
     pub fn try_new() -> Result<Self> {
-        let enumerator: IMMDeviceEnumerator =
-            unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
-        let mut result = Self {
-            enumerator,
-            endpoints: Vec::new(),
-        };
+        let mut result = Self::try_new_with_empty_list()?;
         result.refresh()?;
         Ok(result)
+    }
+
+    /// Create a new [`DeviceEnumerator`] without populating the list of devices.
+    ///
+    /// When calling this method, you'll have to call [`Self::refresh`] manually to get the list of
+    /// available devices.
+    ///
+    /// See [`Self::try_new`] for more information.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
+    /// assert_eq!(enumerator.len(), 0);
+    ///
+    /// enumerator.refresh()?;
+    /// for information in enumerator.iter() {
+    ///     println!("{}", information);
+    /// }
+    /// ```
+    ///
+    /// # Notes:
+    ///
+    /// COM has to be initialized for the calling thread before calling this method.
+    pub fn try_new_with_empty_list() -> Result<Self> {
+        let enumerator: IMMDeviceEnumerator =
+            unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
+        Ok(Self {
+            enumerator,
+            endpoints: Vec::new(),
+        })
     }
 
     /// Refresh the list of audio devices.
