@@ -6,7 +6,7 @@
 compile_error!("This crate is only available on Windows.");
 
 mod device;
-use device::Device;
+pub use device::Device;
 
 mod enumerator;
 pub use enumerator::DeviceEnumerator;
