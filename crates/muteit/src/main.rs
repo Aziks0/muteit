@@ -2,16 +2,22 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod config;
+
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::UserAttentionType;
 use dioxus::desktop::{Config, WindowBuilder, WindowCloseBehaviour, window};
 use dioxus::prelude::*;
+
+use crate::config::use_config;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 /// The main application component.
 #[component]
 fn App() -> Element {
+    let config = use_config()?;
+
     rsx! {}
 }
 
