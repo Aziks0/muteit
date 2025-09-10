@@ -3,13 +3,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
-use dioxus::desktop::{Config, WindowBuilder};
+use dioxus::desktop::tao::window::UserAttentionType;
+use dioxus::desktop::{Config, WindowBuilder, WindowCloseBehaviour, window};
 use dioxus::prelude::*;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
+/// The main application component.
 #[component]
 fn App() -> Element {
+    rsx! {}
+}
+
+/// A version of the `App` component wrapped in an `ErrorBoundary`.
+///
+/// Everything that can fail should be put in [`App`] to ensure we can display a user-friendly error
+/// message.
+#[component]
+fn InfallibleApp() -> Element {
     #[cfg(debug_assertions)]
     dioxus::desktop::use_global_shortcut("Ctrl+Shift+I", |state| {
         if state == dioxus::desktop::HotKeyState::Pressed {
@@ -20,6 +31,21 @@ fn App() -> Element {
 
     rsx! {
         document::Stylesheet { href: TAILWIND_CSS }
+        ErrorBoundary {
+            handle_error: |errors: ErrorContext| {
+                window().set_close_behavior(WindowCloseBehaviour::WindowCloses);
+                window().set_visible(true);
+                window().request_user_attention(Some(UserAttentionType::Critical));
+
+                rsx! {
+                    p { "Oops, an error has been encountered." }
+                    for error in errors.errors() {
+                        p { "{error}" }
+                    }
+                }
+            },
+            App {}
+        }
     }
 }
 
@@ -36,5 +62,5 @@ fn main() {
                 .with_disable_drag_drop_handler(true)
                 .with_menu(None),
         )
-        .launch(App);
+        .launch(InfallibleApp);
 }
