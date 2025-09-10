@@ -6,6 +6,7 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+use windows::Win32::Foundation::E_INVALIDARG;
 use windows::Win32::Media::Audio::{
     DEVICE_STATE_ACTIVE, IAudioSessionManager, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
 };
@@ -252,6 +253,8 @@ where
             // check for this error for the `IMMDeviceEnumerator::GetDevice` method.
             if err.code() == HRESULT(0x80070490_u32 as i32) {
                 Error::DeviceNotFound
+            } else if err.code() == E_INVALIDARG {
+                Error::InvalidDeviceID
             } else {
                 Error::UnknownWindows(err)
             }

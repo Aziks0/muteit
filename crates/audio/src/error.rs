@@ -18,6 +18,8 @@ pub enum Error {
     DeviceInvalidated,
     #[error("the device ID does not identify an audio device that is in this system")]
     DeviceNotFound,
+    #[error("the ID is not a device ID")]
+    InvalidDeviceID,
     #[error("unknown windows error ({0})")]
     UnknownWindows(windows::core::Error),
 }
