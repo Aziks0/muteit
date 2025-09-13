@@ -224,25 +224,30 @@ impl DeviceEnumerator {
     }
 
     /// Get a device using its ID.
+    pub fn get_device(&self, id: impl AsRef<str>) -> Result<Device> {
+        let id: Vec<u16> = id
+            .as_ref()
+            .encode_utf16()
+            .chain(std::iter::once(0u16))
+            .collect();
+        // SAFETY:
+        // The memory the pointer points to won't get modified because we wrap it in a
+        // `PCWSTR` (`PCWSTR` doesn't make it impossible to modify the underlying data, but the
+        // name makes it pretty clear it shouldn't be touched, and Windows calls don't modify
+        // `PCWSTR`).
+        // The `id` vec gets dropped at the end of this scope. The pointer gets dropped when
+        // `get_device_by_id` returns. `get_device_by_id` does not keep a hold to the pointer
+        // whatsoever. So we are safe from dangling pointer.
+        get_device_by_id(&self.enumerator, PCWSTR(id.as_ptr()))
+    }
+
+    /// Get a device using its ID.
     ///
     /// # Notes:
     ///
     /// COM has to be initialized for the calling thread before calling this method.
     pub fn get_device_by_id(id: &String) -> Result<Device> {
-        unsafe {
-            let enumerator: IMMDeviceEnumerator =
-                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
-            let id: Vec<u16> = id.encode_utf16().chain(std::iter::once(0u16)).collect();
-            // SAFETY:
-            // The memory the pointer points to won't get modified because we wrap it in a
-            // `PCWSTR` (`PCWSTR` doesn't make it impossible to modify the underlying data, but the
-            // name makes it pretty clear it shouldn't be touched, and Windows calls don't modify
-            // `PCWSTR`).
-            // The `id` vec gets dropped at the end of this scope. The pointer gets dropped when
-            // `get_device_by_id` returns. `get_device_by_id` does not keep a hold to the pointer
-            // whatsoever. So we are safe from dangling pointer.
-            get_device_by_id(&enumerator, PCWSTR(id.as_ptr()))
-        }
+        Self::try_new_with_empty_list()?.get_device(id)
     }
 }
 
