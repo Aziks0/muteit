@@ -246,7 +246,7 @@ impl DeviceEnumerator {
     /// # Notes:
     ///
     /// COM has to be initialized for the calling thread before calling this method.
-    pub fn get_device_by_id(id: &String) -> Result<Device> {
+    pub fn get_device_by_id(id: impl AsRef<str>) -> Result<Device> {
         Self::try_new_with_empty_list()?.get_device(id)
     }
 }
