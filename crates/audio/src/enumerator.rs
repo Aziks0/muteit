@@ -4,6 +4,7 @@
 
 use std::fmt::Display;
 use std::ops::Deref;
+use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
@@ -34,11 +35,23 @@ use crate::{Device, Error, Result};
 /// // Get a copy of its id:
 /// let id = information.get_id();
 /// ```
+///
+/// You can convert it to a [`Device`] by using either [`try_from`](TryFrom::try_from) or
+/// [`try_into`](TryInto::try_into):
+///
+/// ```ignore
+/// let enumerator = DeviceEnumerator::try_new()?;
+///
+/// let device = Device::try_from(&enumerator[0])?;
+/// let device: Device = enumerator.index(0).try_into()?;
+/// ```
 pub struct DeviceInformation {
     /// The unique identifier of the device.
     id: PWSTR,
     /// The name of the device.
     name: String,
+    /// A reference to the enumerator.
+    enumerator: Rc<IMMDeviceEnumerator>,
 }
 
 impl DeviceInformation {
@@ -49,6 +62,16 @@ impl DeviceInformation {
         // the memory for us. We are responsible for freeing it, so the pointer should be valid
         // until we drop `self`.
         unsafe { self.id.to_string().unwrap() }
+    }
+}
+
+// I'm not very fond of having an implementation for a type not in this file, but I prefer this over
+// making `get_device_by_id` and attributes of `DeviceInformation` `pub(crate)`.
+impl TryFrom<&DeviceInformation> for Device {
+    type Error = Error;
+
+    fn try_from(value: &DeviceInformation) -> std::result::Result<Self, Self::Error> {
+        get_device_by_id(&value.enumerator, value.id)
     }
 }
 
@@ -97,14 +120,15 @@ impl Drop for DeviceInformation {
 /// ```ignore
 /// // Using the enumerator:
 /// let enumerator = DeviceEnumerator::try_new()?;
-/// let device = enumerator.get_device(&enumerator[0])?;
+/// let device = Device::try_from(&enumerator[0])?;
+/// let device: Device = enumerator.index(0).try_into()?;
 ///
 /// // Or, if you know the ID beforehand, you can directly get it:
 /// let device_id = String::from("...");
 /// let device = DeviceEnumerator::get_device_by_id(&device_id)?;
 /// ```
 pub struct DeviceEnumerator {
-    enumerator: IMMDeviceEnumerator,
+    enumerator: Rc<IMMDeviceEnumerator>,
     endpoints: Vec<DeviceInformation>,
 }
 
@@ -123,7 +147,7 @@ impl DeviceEnumerator {
     /// }
     ///
     /// // And get the device you want:
-    /// let device = enumerator.get_device(&enumerator[0])?;
+    /// let device: Device = enumerator.index(0).try_into()?;
     /// ```
     ///
     /// # Notes:
@@ -161,7 +185,7 @@ impl DeviceEnumerator {
         let enumerator: IMMDeviceEnumerator =
             unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
         Ok(Self {
-            enumerator,
+            enumerator: Rc::new(enumerator),
             endpoints: Vec::new(),
         })
     }
@@ -188,27 +212,15 @@ impl DeviceEnumerator {
 
                 let id = device.GetId()?;
 
-                self.endpoints.push(DeviceInformation { id, name });
+                self.endpoints.push(DeviceInformation {
+                    id,
+                    name,
+                    enumerator: self.enumerator.clone(),
+                });
             }
         }
 
         Ok(())
-    }
-
-    /// Get a device.
-    ///
-    ///
-    /// # Examples
-    ///
-    /// You can get a reference to a device's information by dereferencing [`DeviceEnumerator`]:
-    ///
-    /// ```ignore
-    /// let enumerator = DeviceEnumerator::try_new()?;
-    ///
-    /// let device = enumerator.get_device(&enumerator[0]);
-    /// ```
-    pub fn get_device(&self, information: &DeviceInformation) -> Result<Device> {
-        get_device_by_id(&self.enumerator, information.id)
     }
 
     /// Get a device using its ID.
