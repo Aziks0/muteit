@@ -89,8 +89,8 @@ impl Drop for DeviceInformation {
 
 /// A list of audio devices.
 ///
-/// This should be used to iterate over the available devices' information, but also to get one such
-/// device.
+/// This should be used to iterate over the available [devices' information], but also to get one
+/// such device.
 ///
 /// # Examples
 ///
@@ -127,6 +127,8 @@ impl Drop for DeviceInformation {
 /// let device_id = String::from("...");
 /// let device = DeviceEnumerator::get_device_by_id(&device_id)?;
 /// ```
+///
+/// [devices' information]: DeviceInformation
 pub struct DeviceEnumerator {
     enumerator: Rc<IMMDeviceEnumerator>,
     endpoints: Vec<DeviceInformation>,
@@ -149,6 +151,8 @@ impl DeviceEnumerator {
     /// // And get the device you want:
     /// let device: Device = enumerator.index(0).try_into()?;
     /// ```
+    ///
+    /// See also [`DeviceInformation`].
     ///
     /// # Notes:
     ///
