@@ -12,7 +12,7 @@ use windows::Win32::Media::Audio::{
     DEVICE_STATE_ACTIVE, IAudioSessionManager, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
 };
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
-use windows::core::{HRESULT, PCWSTR, PWSTR};
+use windows::core::{HRESULT, PCWSTR};
 
 use crate::{Device, Error, Result};
 
@@ -47,7 +47,7 @@ use crate::{Device, Error, Result};
 /// ```
 pub struct DeviceInformation {
     /// The unique identifier of the device.
-    id: PWSTR,
+    id: PCWSTR,
     /// The name of the device.
     name: String,
     /// A reference to the enumerator.
@@ -215,6 +215,7 @@ impl DeviceEnumerator {
                     .to_string();
 
                 let id = device.GetId()?;
+                let id = PCWSTR(id.0);
 
                 self.endpoints.push(DeviceInformation {
                     id,
