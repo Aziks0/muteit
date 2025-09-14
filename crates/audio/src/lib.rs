@@ -9,7 +9,7 @@ mod device;
 pub use device::Device;
 
 mod enumerator;
-pub use enumerator::DeviceEnumerator;
+pub use enumerator::{DeviceEnumerator, DeviceInformation};
 
 mod error;
 pub use error::Error;
