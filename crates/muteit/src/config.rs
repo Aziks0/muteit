@@ -11,11 +11,21 @@ use dioxus_signals::Signal;
 use global_hotkey::hotkey::HotKey;
 use serde::{Deserialize, Serialize};
 
+/// Information about the device to control.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DeviceInformation {
+    /// Name of the device.
+    pub name: String,
+    /// ID of the device.
+    pub id: String,
+}
+
 /// Configuration for the app.
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct AppConfig {
-    /// ID of the device to control.
-    pub id: Signal<Option<String>>,
+    /// Information about the device to control.
+    #[serde(flatten)]
+    pub information: Signal<Option<DeviceInformation>>,
     /// Shortcut for controlling the device.
     pub shortcut: Signal<Option<HotKey>>,
 }
@@ -24,7 +34,7 @@ impl AppConfig {
     /// Create a new configuration with default values.
     fn new() -> Self {
         Self {
-            id: Signal::new(None),
+            information: Signal::new(None),
             shortcut: Signal::new(None),
         }
     }
