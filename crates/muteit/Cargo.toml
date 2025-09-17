@@ -17,3 +17,11 @@ toml = "0.9.5"
 dioxus = { workspace = true }
 
 audio = { path = "../audio" }
+key-t = { path = "../key-t" }
+
+[build-dependencies]
+oxc = { version = "0.92.0", default-features = false, features = [
+  "codegen",
+  "mangler",
+  "minifier",
+] }

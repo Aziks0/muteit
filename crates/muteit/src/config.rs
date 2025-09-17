@@ -20,14 +20,24 @@ pub struct DeviceInformation {
     pub id: String,
 }
 
+/// Information about the hotkey to control the selected device.
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct HotkeyInformation {
+    /// The [`HotKey`] ready to be used.
+    pub hotkey: HotKey,
+    /// The display character(s) of the key in the hotkey.
+    pub key: String,
+}
+
 /// Configuration for the app.
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct AppConfig {
     /// Information about the device to control.
     #[serde(flatten)]
     pub information: Signal<Option<DeviceInformation>>,
-    /// Shortcut for controlling the device.
-    pub shortcut: Signal<Option<HotKey>>,
+    /// Hotkey for controlling the device.
+    #[serde(flatten)]
+    pub hotkey: Signal<Option<HotkeyInformation>>,
 }
 
 impl AppConfig {
@@ -35,7 +45,7 @@ impl AppConfig {
     fn new() -> Self {
         Self {
             information: Signal::new(None),
-            shortcut: Signal::new(None),
+            hotkey: Signal::new(None),
         }
     }
 

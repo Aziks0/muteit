@@ -6,6 +6,16 @@
 
 @import "tailwindcss";
 
+@font-face {
+  font-family: "JetBrainsMono";
+  src: url("/assets/JetBrainsMono-Regular.woff2") format("woff2");
+}
+
+/* biome-ignore lint/suspicious/noUnknownAtRules: this is a tailwind's directive */
+@theme {
+  --font-mono: "JetBrainsMono", "Consolas";
+}
+
 :root {
   /**
    * SPDX-SnippetBegin

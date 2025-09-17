@@ -4,17 +4,21 @@
 
 mod config;
 mod device_selector;
+mod hotkey_binding;
 
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::UserAttentionType;
-use dioxus::desktop::{Config, WindowBuilder, WindowCloseBehaviour, window};
+use dioxus::desktop::{
+    Config, HotKeyState, ShortcutHandle, WindowBuilder, WindowCloseBehaviour, window,
+};
 use dioxus::prelude::*;
 
 use audio::{Device, DeviceEnumerator};
 
 use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
+use crate::hotkey_binding::HotkeyBinding;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
@@ -45,8 +49,47 @@ fn App() -> Element {
         }
     });
 
+    let mut shortcut_handle = use_signal::<Option<ShortcutHandle>>(|| None);
+
+    use_effect(move || {
+        if let Some(ref shortcut) = *shortcut_handle.peek() {
+            shortcut.remove();
+        }
+
+        match *config.hotkey.read() {
+            Some(ref hotkey) => {
+                let res = window()
+                    .create_shortcut(hotkey.hotkey, move |state| {
+                        fn toggle_mute(device: &Device) -> dioxus::Result<()> {
+                            let muted = device.get_mute().context("Getting device mute state.")?;
+                            device
+                                .set_mute(!muted)
+                                .context("Setting device mute state.")?;
+
+                            Ok(())
+                        }
+
+                        if state == HotKeyState::Pressed {
+                            if let Ok(Some(ref device)) = *device.peek() {
+                                if let Err(err) = toggle_mute(device) {
+                                    throw_error(err);
+                                }
+                            }
+                        }
+                    })
+                    .context("Creating shortcut.");
+
+                match res {
+                    Ok(shortcut) => shortcut_handle.set(Some(shortcut)),
+                    Err(err) => throw_error(err),
+                };
+            }
+            None => shortcut_handle.set(None),
+        };
+    });
+
     rsx! {
-        div { class: "flex h-screen items-center justify-center bg-blue-800 text-white",
+        div { class: "flex h-screen items-center justify-center bg-neutral-800 text-white",
             div { class: "flex flex-col w-5/6 gap-2",
                 DeviceSelector {
                     on_select: move |i: Option<u32>| {
@@ -68,6 +111,7 @@ fn App() -> Element {
                     default: information,
                     enumerator,
                 }
+                HotkeyBinding { hotkey: config.hotkey }
             }
         }
     }
