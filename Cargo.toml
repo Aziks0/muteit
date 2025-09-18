@@ -8,3 +8,7 @@ members = ["crates/audio", "crates/muteit"]
 
 [workspace.dependencies.windows]
 version = "0.61.3"
+
+[patch.crates-io]
+dioxus = { git = "https://github.com/Aziks0/dioxus.git", branch = "fork" }
+dioxus-signals = { git = "https://github.com/Aziks0/dioxus.git", branch = "fork" }

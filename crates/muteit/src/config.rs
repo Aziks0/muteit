@@ -7,8 +7,8 @@ use std::sync::OnceLock;
 
 use dioxus::Result;
 use dioxus::core::{Context, use_drop, use_hook};
+use dioxus::desktop::HotKey;
 use dioxus_signals::Signal;
-use global_hotkey::hotkey::HotKey;
 use serde::{Deserialize, Serialize};
 
 /// Information about the device to control.
