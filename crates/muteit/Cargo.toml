@@ -20,6 +20,7 @@ audio = { path = "../audio" }
 key-t = { path = "../key-t" }
 
 [build-dependencies]
+lightningcss = "1.0.0-alpha.67"
 oxc = { version = "0.92.0", default-features = false, features = [
   "codegen",
   "mangler",

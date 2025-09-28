@@ -20,7 +20,24 @@ use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
 
-const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+// Bake tailwind into the binary only in release mode. We want to keep using dx `Asset` in debug to
+// get hotreloading.
+#[cfg(debug_assertions)]
+#[component]
+fn Tailwind() -> Element {
+    rsx! {
+        document::Stylesheet { href: asset!("/assets/tailwind.css") }
+    }
+}
+#[cfg(not(debug_assertions))]
+#[component]
+fn Tailwind() -> Element {
+    const TAILWIND: &str = include_str!(concat!(env!("OUT_DIR"), "/tailwind.css",));
+
+    rsx! {
+        document::Style { {TAILWIND} }
+    }
+}
 
 /// The main application component.
 #[component]
@@ -132,7 +149,7 @@ fn InfallibleApp() -> Element {
     .unwrap();
 
     rsx! {
-        document::Stylesheet { href: TAILWIND_CSS }
+        Tailwind {}
         ErrorBoundary {
             handle_error: |errors: ErrorContext| {
                 window().set_close_behavior(WindowCloseBehaviour::WindowCloses);
