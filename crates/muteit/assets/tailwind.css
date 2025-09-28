@@ -316,7 +316,7 @@
 }
 @font-face {
   font-family: "JetBrainsMono";
-  src: url("/assets/JetBrainsMono-Regular.woff2") format("woff2");
+  src: url("/JetBrainsMono-Regular.woff2") format("woff2");
 }
 :root {
   --chevrons-up-down-data-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");

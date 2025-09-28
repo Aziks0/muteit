@@ -4,7 +4,9 @@
 
 use std::str::FromStr;
 
-use dioxus::desktop::{Code, HotKey};
+use dioxus::core::use_hook_with_cleanup;
+use dioxus::desktop::wry::http::Response;
+use dioxus::desktop::{Code, HotKey, window};
 use dioxus::prelude::*;
 use serde::Deserialize;
 
@@ -12,12 +14,13 @@ use key_t::LogicalKey;
 
 use crate::config::HotkeyInformation;
 
-const FONT: Asset = asset!(
-    "/assets/JetBrainsMono-Regular.woff2",
-    AssetOptions::builder().with_hash_suffix(false)
-);
-
 const SCRIPT: &str = include_str!(concat!(env!("OUT_DIR"), "/hotkey_binding.js"));
+
+const FONT_NAME: &str = "JetBrainsMono-Regular.woff2";
+const FONT: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/JetBrainsMono-Regular.woff2",
+));
 
 /// The [keyboard event](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent) given to us
 /// by our JS script.
@@ -173,6 +176,21 @@ impl From<&HotkeyInformation> for KeyPresses {
 
 #[component]
 pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element {
+    use_hook_with_cleanup(
+        || {
+            window().register_asset_handler(String::from(FONT_NAME), |_asset, responder| {
+                responder.respond(
+                    Response::builder()
+                        .header("Content-Type", "application/font-woff")
+                        .header("Access-Control-Allow-Origin", "*")
+                        .body(FONT)
+                        .unwrap(),
+                )
+            })
+        },
+        |_| _ = window().remove_asset_handler(FONT_NAME),
+    );
+
     let mut is_binding = use_signal(|| false);
     let mut key_presses = use_signal(|| match *hotkey.peek() {
         Some(ref hotkey) => KeyPresses::from(hotkey),
@@ -181,8 +199,6 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
     let mut error = use_signal::<Option<&'static str>>(|| None);
 
     rsx! {
-        // Dummy `<link rel="stylesheet">` otherwise dx won't copy the asset.
-        document::Stylesheet { href: FONT, disabled: true }
         div {
             label { class: "ml-1 text-sm font-medium", id: "hotkey-label", "Hotkey" }
             div { class: "flex w-full gap-1",
