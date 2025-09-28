@@ -108,7 +108,7 @@ impl AppConfig {
     }
 
     /// Save the configuration to the default location.
-    fn save(&self) -> Result<()> {
+    pub fn save(&self) -> Result<()> {
         let config_path = Self::get_location()?;
         let config_content = toml::to_string(self)?;
         std::fs::write(config_path, config_content)?;

@@ -124,6 +124,7 @@ fn App() -> Element {
                                 }
                             });
                         config.information.set(information);
+                        config.save()
                     },
                     default: information,
                     enumerator,

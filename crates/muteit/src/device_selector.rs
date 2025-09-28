@@ -59,7 +59,7 @@ pub fn DeviceSelector(
                     class: "focus-visible:border-white focus-visible:outline-none",
                     onchange: move |event| {
                         let value = event.value().parse::<u32>().ok();
-                        on_select.call(value);
+                        on_select.call(value)
                     },
                     option { value: "none", "None" }
                     {elements.iter()}
