@@ -6,6 +6,15 @@
 
 @import "tailwindcss";
 
+/* biome-ignore-start lint/suspicious/noUnknownAtRules: tailwind's directives */
+@custom-variant picker (&::picker(select));
+@custom-variant picker-icon (&::picker-icon);
+
+@utility base-select {
+  appearance: base-select;
+}
+/* biome-ignore-end lint/suspicious/noUnknownAtRules: tailwind's directives */
+
 @font-face {
   font-family: "JetBrainsMono";
   src: url("/JetBrainsMono-Regular.woff2") format("woff2");
@@ -15,38 +24,3 @@
 @theme {
   --font-mono: "JetBrainsMono", "Consolas";
 }
-
-:root {
-  /**
-   * SPDX-SnippetBegin
-   * SPDX-SnippetCopyrightText: 2013-2023 Cole Bemis as part of Feather
-   * SPDX-SnippetCopyrightText: 2025 Lucide Contributors
-   * SPDX-SnippetCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
-   * SPDX-License-Identifier: MIT AND ISC
-   * SPDX-SnippetComment: https://github.com/lucide-icons/lucide/blob/31cfa79818dae797830b9f0c910e13bd9bc66b05/icons/chevrons-up-down.svg
-   */
-  --chevrons-up-down-data-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
-  /**
-   * SPDX-SnippetEnd
-   */
-}
-
-/**
- * SPDX-SnippetBegin
- * SPDX-SnippetCopyrightText: Tailwind Labs, Inc.
- * SPDX-License-Identifier: MIT
- * SPDX-SnippetComment: https://github.com/tailwindlabs/tailwindcss-forms/blob/fc3f7e6bce06a1985d445c53e90c3c7fac0e1d18/src/index.js
- */
-input[type="select"],
-select {
-  appearance: none;
-
-  background-image: var(--chevrons-up-down-data-image);
-  background-repeat: no-repeat;
-  background-position: right calc(var(--spacing) * 2) center;
-  background-size: 1.5em 1.5em;
-  padding-right: calc(var(--spacing) * 10);
-}
-/**
- * SPDX-SnippetEnd
- */

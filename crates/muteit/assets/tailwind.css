@@ -9,6 +9,7 @@
     --color-red-600: oklch(57.7% 0.245 27.325);
     --color-gray-600: oklch(44.6% 0.03 256.802);
     --color-gray-700: oklch(37.3% 0.034 259.733);
+    --color-gray-800: oklch(27.8% 0.033 256.848);
     --color-gray-900: oklch(21% 0.034 264.665);
     --color-neutral-800: oklch(26.9% 0 0);
     --color-black: #000;
@@ -195,6 +196,9 @@
   .w-full {
     width: 100%;
   }
+  .min-w-0 {
+    min-width: calc(var(--spacing) * 0);
+  }
   .grow {
     flex-grow: 1;
   }
@@ -203,6 +207,9 @@
   }
   .cursor-pointer {
     cursor: pointer;
+  }
+  .base-select {
+    appearance: base-select;
   }
   .flex-col {
     flex-direction: column;
@@ -218,6 +225,11 @@
   }
   .gap-2 {
     gap: calc(var(--spacing) * 2);
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .rounded-md {
     border-radius: var(--radius-md);
@@ -313,21 +325,46 @@
       outline-style: none;
     }
   }
+  .picker\:mt-1 {
+    &::picker(select) {
+      margin-top: calc(var(--spacing) * 1);
+    }
+  }
+  .picker\:base-select {
+    &::picker(select) {
+      appearance: base-select;
+    }
+  }
+  .picker\:rounded-md {
+    &::picker(select) {
+      border-radius: var(--radius-md);
+    }
+  }
+  .picker\:border-2 {
+    &::picker(select) {
+      border-style: var(--tw-border-style);
+      border-width: 2px;
+    }
+  }
+  .picker\:border-black {
+    &::picker(select) {
+      border-color: var(--color-black);
+    }
+  }
+  .picker\:bg-gray-800 {
+    &::picker(select) {
+      background-color: var(--color-gray-800);
+    }
+  }
+  .picker\:text-white {
+    &::picker(select) {
+      color: var(--color-white);
+    }
+  }
 }
 @font-face {
   font-family: "JetBrainsMono";
   src: url("/JetBrainsMono-Regular.woff2") format("woff2");
-}
-:root {
-  --chevrons-up-down-data-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
-}
-input[type="select"], select {
-  appearance: none;
-  background-image: var(--chevrons-up-down-data-image);
-  background-repeat: no-repeat;
-  background-position: right calc(var(--spacing) * 2) center;
-  background-size: 1.5em 1.5em;
-  padding-right: calc(var(--spacing) * 10);
 }
 @property --tw-border-style {
   syntax: "*";

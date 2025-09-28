@@ -26,7 +26,14 @@ pub fn DeviceSelector(
         }
 
         let element = rsx! {
-            option { key: "{id}", value, initial_selected, "{information}" }
+            option {
+                class: "px-3 py-1.5",
+                key: "{id}",
+                value,
+                initial_selected,
+                title: "{information}",
+                "{information}"
+            }
 
         };
         elements.push(element);
@@ -38,11 +45,13 @@ pub fn DeviceSelector(
         let DeviceInformation { id, name } = default;
         let element = rsx! {
             option {
+                class: "px-3 py-1.5",
                 key: "{id}",
                 value: "default",
                 initial_selected: true,
                 disabled: true,
-                "{name} (Unavailable)"
+                title: "(Unavailable) {name}",
+                "(Unavailable) {name}"
             }
         };
         elements.push(element);
@@ -54,14 +63,23 @@ pub fn DeviceSelector(
             div { class: "flex w-full gap-1",
                 select {
                     id: "device-select",
-                    class: "grow rounded-md border-2 border-gray-900 bg-black px-3 py-2",
+                    class: "min-w-0 grow base-select",
+                    class: "rounded-md border-2 border-gray-900 bg-black px-3 py-2",
                     class: "hover:border-gray-700",
                     class: "focus-visible:border-white focus-visible:outline-none",
+                    class: "picker:mt-1 picker:base-select picker:rounded-md picker:border-2",
+                    class: "picker:border-black picker:bg-gray-800 picker:text-white",
                     onchange: move |event| {
                         let value = event.value().parse::<u32>().ok();
                         on_select.call(value)
                     },
-                    option { value: "none", "None" }
+                    button {
+                        class: "flex truncate",
+                        dangerous_inner_html: r#"<selectedcontent
+                                                    class="min-w-0 truncate"
+                                                 ></selectedcontent>"#,
+                    }
+                    option { class: "px-3 py-1.5", value: "none", "None" }
                     {elements.iter()}
                 }
                 button {
