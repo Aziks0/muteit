@@ -9,8 +9,8 @@ use minijinja::render;
 use regex::RegexBuilder;
 
 fn main() {
-    println!("cargo:rerun-if-changed=assets/dom_code_data.inc");
-    println!("cargo:rerun-if-changed=assets/code_to_scancode.rs.jinja");
+    println!("cargo::rerun-if-changed=assets/dom_code_data.inc");
+    println!("cargo::rerun-if-changed=assets/code_to_scancode.rs.jinja");
 
     let data = include_str!("assets/dom_code_data.inc");
 

@@ -16,9 +16,14 @@ use oxc::parser::Parser;
 use oxc::span::SourceType;
 
 fn minify_tailwind() {
-    println!("cargo:rerun-if-changed=assets/tailwind.css");
+    println!("cargo::rerun-if-changed=assets/tailwind.css");
 
-    let source = include_str!("assets/tailwind.css");
+    // `include_str!()` adds the file to the dependency list, even if the code does not run (i.e.
+    // even if `debug_assertions` are present), so we prefer to read the file at runtime to avoid
+    // the build script running every time we make changes to our css.
+    let source =
+        fs::read_to_string("assets/tailwind.css").expect("`assets/tailwind.css` to be read");
+    let source = &source;
 
     // Edge >= 140
     let targets = Targets {
@@ -51,7 +56,10 @@ fn minify_tailwind() {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=assets/hotkey_binding.js");
+    // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
+    // required. Avoid build script run at all cost.
+
+    println!("cargo::rerun-if-changed=assets/hotkey_binding.js");
 
     let source = include_str!("assets/hotkey_binding.js");
 
