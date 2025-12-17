@@ -163,7 +163,7 @@ fn InfallibleApp() -> Element {
 
                 rsx! {
                     p { "Oops, an error has been encountered." }
-                    p { "{error}" }
+                    p { "{error:#}" }
                 }
             },
             App {}
