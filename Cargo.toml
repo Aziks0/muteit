@@ -10,7 +10,7 @@ members = ["crates/audio", "crates/key-t", "crates/muteit"]
 version = "0.61.3"
 
 [workspace.dependencies.dioxus]
-version = "0.7.0-rc.0"
+version = "0.7.2-rc.0.0"
 features = ["desktop"]
 
 [patch.crates-io]

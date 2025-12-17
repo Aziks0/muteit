@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use dioxus::Result;
-use dioxus::core::{Context, use_drop, use_hook};
+use dioxus::core::{AnyhowContext, use_drop, use_hook};
 use dioxus::desktop::HotKey;
 use dioxus_signals::Signal;
 use serde::{Deserialize, Serialize};
@@ -94,12 +94,12 @@ impl AppConfig {
                 if err.kind() == std::io::ErrorKind::NotFound {
                     return Ok(AppConfig::new());
                 }
-                return Err(err).with_context(|| {
-                    format!(
+                return Err(err)
+                    .context(format!(
                         "Could not read config file at `{}`.",
                         config_path.to_string_lossy()
-                    )
-                });
+                    ))
+                    .map_err(|err| err.into());
             }
         };
 

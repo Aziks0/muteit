@@ -9,7 +9,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
-dioxus-signals = { version = "0.7.0-rc.0", features = ["serialize"] }
+dioxus-signals = { version = "0.7.2-rc.0.0", features = ["serialize"] }
 global-hotkey = { version = "0.7.0", features = ["serde"] }
 serde = "1.0.219"
 toml = "0.9.5"

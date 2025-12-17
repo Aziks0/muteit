@@ -152,16 +152,18 @@ fn InfallibleApp() -> Element {
     rsx! {
         Tailwind {}
         ErrorBoundary {
-            handle_error: |errors: ErrorContext| {
+            handle_error: |error_context: ErrorContext| {
                 window().set_close_behavior(WindowCloseBehaviour::WindowCloses);
                 window().set_visible(true);
                 window().request_user_attention(Some(UserAttentionType::Critical));
 
+                let error = error_context
+                    .error()
+                    .expect("error should be present inside the handler");
+
                 rsx! {
                     p { "Oops, an error has been encountered." }
-                    for error in errors.errors() {
-                        p { "{error}" }
-                    }
+                    p { "{error}" }
                 }
             },
             App {}
