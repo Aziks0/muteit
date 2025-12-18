@@ -6,21 +6,20 @@
 
 @import "tailwindcss";
 
-/* biome-ignore-start lint/suspicious/noUnknownAtRules: tailwind's directives */
+/* biome-ignore-start lint/correctness/noUnknownPseudoElement: experimental, but supported by edge */
 @custom-variant picker (&::picker(select));
 @custom-variant picker-icon (&::picker-icon);
+/* biome-ignore-end lint/correctness/noUnknownPseudoElement: experimental, but supported by edge */
 
 @utility base-select {
   appearance: base-select;
 }
-/* biome-ignore-end lint/suspicious/noUnknownAtRules: tailwind's directives */
 
 @font-face {
   font-family: "JetBrainsMono";
   src: url("/JetBrainsMono-Regular.woff2") format("woff2");
 }
 
-/* biome-ignore lint/suspicious/noUnknownAtRules: this is a tailwind's directive */
 @theme {
   --font-mono: "JetBrainsMono", "Consolas";
 }
