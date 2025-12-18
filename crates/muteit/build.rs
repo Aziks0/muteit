@@ -55,10 +55,7 @@ fn minify_tailwind() {
     fs::write(path, code).expect("tailwind.css to be written");
 }
 
-fn main() {
-    // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
-    // required. Avoid build script run at all cost.
-
+fn minify_js() {
     println!("cargo::rerun-if-changed=assets/hotkey_binding.js");
 
     let source = include_str!("assets/hotkey_binding.js");
@@ -87,6 +84,13 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let path = Path::new(&out_dir).join("hotkey_binding.js");
     fs::write(path, code).expect("hotkey_binding.js to be written");
+}
+
+fn main() {
+    // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
+    // required. Avoid build script run at all cost.
+
+    minify_js();
 
     if !cfg!(debug_assertions) {
         minify_tailwind();
