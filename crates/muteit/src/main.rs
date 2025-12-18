@@ -5,6 +5,7 @@
 mod config;
 mod device_selector;
 mod hotkey_binding;
+mod tray_icon;
 
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
@@ -19,6 +20,7 @@ use audio::{Device, DeviceEnumerator};
 use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
+use crate::tray_icon::{TrayIcon, use_setup_tray};
 
 // Bake tailwind into the binary only in release mode. We want to keep using dx `Asset` in debug to
 // get hotreloading.
@@ -37,6 +39,13 @@ fn Tailwind() -> Element {
     rsx! {
         document::Style { {TAILWIND} }
     }
+}
+
+pub fn toggle_mute(device: &Device, tray: &TrayIcon) -> Result<()> {
+    let muted = device.get_mute()?;
+    device.set_mute(!muted)?;
+    tray.set_mute(!muted)?;
+    Ok(())
 }
 
 /// The main application component.
@@ -60,10 +69,23 @@ fn App() -> Element {
             .transpose()
     });
 
+    let tray = use_setup_tray(device)?;
+
     use_effect(move || {
-        if let Err(ref err) = *device.read() {
-            throw_error(err.clone());
-        }
+        // TODO: replace by `try` block when stabilized.
+        // https://doc.rust-lang.org/std/ops/trait.Try.html
+        let inner = move || match *device.read() {
+            Ok(Some(ref device)) => {
+                let muted = device.get_mute()?;
+                tray.peek().set_mute(muted)
+            }
+            Ok(None) => tray.peek().set_none(),
+            Err(ref err) => Ok(Err(err.clone())?),
+        };
+
+        if let Err(err) = inner() {
+            throw_error(err);
+        };
     });
 
     let mut shortcut_handle = use_signal::<Option<ShortcutHandle>>(|| None);
@@ -77,20 +99,11 @@ fn App() -> Element {
             Some(ref hotkey) => {
                 let res = window()
                     .create_shortcut(hotkey.hotkey, move |state| {
-                        fn toggle_mute(device: &Device) -> dioxus::Result<()> {
-                            let muted = device.get_mute().context("Getting device mute state.")?;
-                            device
-                                .set_mute(!muted)
-                                .context("Setting device mute state.")?;
-
-                            Ok(())
-                        }
-
-                        if state == HotKeyState::Pressed {
-                            if let Ok(Some(ref device)) = *device.peek() {
-                                if let Err(err) = toggle_mute(device) {
-                                    throw_error(err);
-                                }
+                        if state == HotKeyState::Pressed
+                            && let Ok(Some(ref device)) = *device.peek()
+                        {
+                            if let Err(err) = toggle_mute(device, &*tray.peek()) {
+                                throw_error(err);
                             }
                         }
                     })
@@ -158,8 +171,8 @@ fn InfallibleApp() -> Element {
                 window().request_user_attention(Some(UserAttentionType::Critical));
 
                 let error = error_context
-                    .error()
-                    .expect("error should be present inside the handler");
+                .error()
+                .expect("error should be present inside the handler");
 
                 rsx! {
                     p { "Oops, an error has been encountered." }
@@ -182,7 +195,8 @@ fn main() {
                 )
                 .with_disable_context_menu(true)
                 .with_disable_drag_drop_handler(true)
-                .with_menu(None),
+                .with_menu(None)
+                .with_close_behaviour(WindowCloseBehaviour::WindowHides),
         )
         .launch(InfallibleApp);
 }

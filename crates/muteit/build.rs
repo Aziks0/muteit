@@ -86,9 +86,34 @@ fn minify_js() {
     fs::write(path, code).expect("hotkey_binding.js to be written");
 }
 
+fn convert_image_to_rgba(path: &Path) {
+    println!("cargo::rerun-if-changed={}", path.display());
+
+    let rgba = image::open(path)
+        .expect(format!("{} to open as an image", path.display()).as_str())
+        .into_rgba8()
+        .into_raw();
+
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let filename = path.with_extension("bin");
+    let filename = filename.file_name().expect("image to have a filename");
+    let path = Path::new(&out_dir).join(filename);
+    fs::write(&path, rgba).expect(format!("{} to be written", path.display()).as_str());
+}
+
+fn convert_images() {
+    let files = ["mic-none.png", "mic-off.png", "mic.png"];
+    for file in files {
+        let path = Path::new("assets").join(file);
+        convert_image_to_rgba(path.as_path());
+    }
+}
+
 fn main() {
     // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
     // required. Avoid build script run at all cost.
+
+    convert_images();
 
     minify_js();
 
