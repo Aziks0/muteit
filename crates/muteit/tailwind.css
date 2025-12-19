@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
-@import "tailwindcss";
+@import "tailwindcss" source("src/");
 
 /* biome-ignore-start lint/correctness/noUnknownPseudoElement: experimental, but supported by edge */
 @custom-variant picker (&::picker(select));
