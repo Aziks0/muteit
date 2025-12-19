@@ -11,7 +11,7 @@ use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::UserAttentionType;
 use dioxus::desktop::{
-    Config, HotKeyState, ShortcutHandle, WindowBuilder, WindowCloseBehaviour, window,
+    Config, HotKeyState, LogicalSize, ShortcutHandle, WindowBuilder, WindowCloseBehaviour, window,
 };
 use dioxus::prelude::*;
 
@@ -191,7 +191,8 @@ fn main() {
                 .with_window(
                     WindowBuilder::new()
                         .with_drag_and_drop(false)
-                        .with_title("muteit!"),
+                        .with_title("muteit!")
+                        .with_inner_size(LogicalSize::new(800, 200)),
                 )
                 .with_disable_context_menu(true)
                 .with_disable_drag_drop_handler(true)
