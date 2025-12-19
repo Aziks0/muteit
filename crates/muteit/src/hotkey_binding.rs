@@ -261,7 +261,7 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
                 }
             }
             if let Some(message) = error() {
-                div { class: "w-fit rounded-b-md bg-red-600 px-1",
+                div { class: "absolute w-fit rounded-b-md bg-red-600 px-1",
                     p { class: "-mt-0.5 text-sm font-medium", role: "alert", {message} }
                 }
             }

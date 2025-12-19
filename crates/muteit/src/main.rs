@@ -119,7 +119,7 @@ fn App() -> Element {
     });
 
     rsx! {
-        div { class: "flex h-screen items-center justify-center bg-neutral-800 text-white",
+        div { class: "flex h-screen items-center justify-center bg-neutral-800 text-white pb-1",
             div { class: "flex flex-col w-5/6 gap-2",
                 DeviceSelector {
                     on_select: move |i: Option<u32>| {
