@@ -102,7 +102,13 @@ fn convert_image_to_rgba(path: &Path) {
 }
 
 fn convert_images() {
-    let files = ["mic-none.png", "mic-off.png", "mic.png"];
+    let files = [
+        "mic-none.png",
+        "mic-off.png",
+        "mic.png",
+        "muteit_32px.ico",
+        "muteit_48px.ico",
+    ];
     for file in files {
         let path = Path::new("assets").join(file);
         convert_image_to_rgba(path.as_path());

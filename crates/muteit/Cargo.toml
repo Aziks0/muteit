@@ -21,7 +21,10 @@ key-t = { path = "../key-t" }
 tokio = { version = "1.48.0", features = ["time"] }
 
 [build-dependencies]
-image = { version = "0.25.9", default-features = false, features = ["png"] }
+image = { version = "0.25.9", default-features = false, features = [
+  "png",
+  "ico",
+] }
 lightningcss = "1.0.0-alpha.67"
 oxc = { version = "0.92.0", default-features = false, features = [
   "codegen",
