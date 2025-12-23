@@ -12,7 +12,7 @@ use windows::Win32::Media::Audio::{
     DEVICE_STATE_ACTIVE, IAudioSessionManager, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
 };
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
-use windows::core::{HRESULT, PCWSTR};
+use windows::core::{HRESULT, HSTRING, PCWSTR};
 
 use crate::{Device, Error, Result};
 
@@ -230,20 +230,7 @@ impl DeviceEnumerator {
 
     /// Get a device using its ID.
     pub fn get_device(&self, id: impl AsRef<str>) -> Result<Device> {
-        let id: Vec<u16> = id
-            .as_ref()
-            .encode_utf16()
-            .chain(std::iter::once(0u16))
-            .collect();
-        // SAFETY:
-        // The memory the pointer points to won't get modified because we wrap it in a
-        // `PCWSTR` (`PCWSTR` doesn't make it impossible to modify the underlying data, but the
-        // name makes it pretty clear it shouldn't be touched, and Windows calls don't modify
-        // `PCWSTR`).
-        // The `id` vec gets dropped at the end of this scope. The pointer gets dropped when
-        // `get_device_by_id` returns. `get_device_by_id` does not keep a hold to the pointer
-        // whatsoever. So we are safe from dangling pointer.
-        get_device_by_id(&self.enumerator, PCWSTR(id.as_ptr()))
+        get_device_by_id(&self.enumerator, &HSTRING::from(id.as_ref()))
     }
 
     /// Get a device using its ID.
