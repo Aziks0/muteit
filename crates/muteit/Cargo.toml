@@ -19,6 +19,7 @@ dioxus = { workspace = true }
 
 alone = { path = "../alone" }
 audio = { path = "../audio" }
+autostart = { path = "../autostart" }
 key-t = { path = "../key-t" }
 
 [build-dependencies]

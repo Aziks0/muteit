@@ -2,11 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod autostart;
 mod config;
 mod device_selector;
 mod hotkey_binding;
 mod tray_icon;
 mod utils;
+
+use std::env::args;
 
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
@@ -19,6 +22,7 @@ use dioxus::prelude::*;
 use alone::is_alone;
 use audio::{Device, DeviceEnumerator};
 
+use crate::autostart::AutoStart;
 use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
@@ -121,6 +125,7 @@ fn App() -> Element {
                     enumerator,
                 }
                 HotkeyBinding { hotkey: config.hotkey }
+                AutoStart {}
             }
         }
     }
@@ -167,6 +172,8 @@ fn main() {
         return;
     }
 
+    let is_autostart = args().rev().find(|arg| arg == "--autostart").is_some();
+
     let small_icon = Icon::from_rgba(MUTEIT_SMALL_ICON_RGBA.to_vec(), 32, 32)
         .expect("muteit_32px.bin should be a correct icon");
     let big_icon = Icon::from_rgba(MUTEIT_BIG_ICON_RGBA.to_vec(), 48, 48)
@@ -179,9 +186,10 @@ fn main() {
                     WindowBuilder::new()
                         .with_drag_and_drop(false)
                         .with_title("muteit!")
-                        .with_inner_size(LogicalSize::new(800, 200))
+                        .with_inner_size(LogicalSize::new(800, 230))
                         .with_window_icon(Some(small_icon))
-                        .with_taskbar_icon(Some(big_icon)),
+                        .with_taskbar_icon(Some(big_icon))
+                        .with_visible(!is_autostart),
                 )
                 .with_disable_context_menu(true)
                 .with_disable_drag_drop_handler(true)
