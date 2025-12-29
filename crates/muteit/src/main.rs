@@ -100,19 +100,15 @@ fn App() -> Element {
 
         match *config.hotkey.read() {
             Some(ref hotkey) => {
-                let res = window()
-                    .create_shortcut(hotkey.hotkey, move |state| {
-                        if state == HotKeyState::Pressed
-                            && let Ok(Some(ref device)) = *device.peek()
-                        {
-                            if let Err(err) = toggle_mute(device, &*tray.peek()) {
-                                throw_error(err);
-                            }
+                match window().create_shortcut(hotkey.hotkey, move |state| {
+                    if state == HotKeyState::Pressed
+                        && let Ok(Some(ref device)) = *device.peek()
+                    {
+                        if let Err(err) = toggle_mute(device, &*tray.peek()) {
+                            throw_error(err);
                         }
-                    })
-                    .context("Creating shortcut.");
-
-                match res {
+                    }
+                }) {
                     Ok(shortcut) => shortcut_handle.set(Some(shortcut)),
                     Err(err) => throw_error(err),
                 };
