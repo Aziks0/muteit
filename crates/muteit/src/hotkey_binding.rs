@@ -108,7 +108,14 @@ impl KeyPresses {
                     .unwrap_or(key_press.key),
             ),
             None => (
-                Code::from_str(&key_press.code).expect("`KeyboardEvent.code` to be W3C compliant"),
+                // It seems like, on Edge, some keys give an empty `code` and in those cases the
+                // `key` is set instead. e.g. `MediaTrackNext`, `AudioVolumeMute`.
+                if key_press.code.len() != 0 {
+                    Code::from_str(&key_press.code)
+                        .expect("`KeyboardEvent.code` to be W3C compliant")
+                } else {
+                    Code::from_str(&key_press.key).expect("")
+                },
                 key_press.key,
             ),
         };
