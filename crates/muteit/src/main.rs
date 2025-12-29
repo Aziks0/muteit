@@ -174,8 +174,8 @@ fn InfallibleApp() -> Element {
                 window().request_user_attention(Some(UserAttentionType::Critical));
 
                 let error = error_context
-                .error()
-                .expect("error should be present inside the handler");
+                    .error()
+                    .expect("error should be present inside the handler");
 
                 rsx! {
                     p { "Oops, an error has been encountered." }
