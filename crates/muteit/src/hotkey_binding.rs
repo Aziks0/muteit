@@ -231,7 +231,7 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
                             return;
                         }
 
-                        is_binding.toggle();
+                        is_binding.set(true);
 
                         hotkey.set(None);
                         key_presses.write().clear();
@@ -255,7 +255,7 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
                             Ok(new_hotkey) => hotkey.set(Some(new_hotkey)),
                         };
 
-                        is_binding.toggle();
+                        is_binding.set(false);
                     },
                     "Bind"
                 }
