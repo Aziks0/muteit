@@ -4,7 +4,7 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/audio", "crates/key-t", "crates/muteit"]
+members = ["crates/alone","crates/audio", "crates/key-t", "crates/muteit"]
 default-members = ["crates/muteit"]
 
 [workspace.dependencies.windows]

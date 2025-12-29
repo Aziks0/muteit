@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
+[package]
+name = "alone"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+widestring = { version = "1.2.1", default-features = false }
+windows = { workspace = true, features = [
+  "Win32_Security",
+  "Win32_System_Threading",
+] }
