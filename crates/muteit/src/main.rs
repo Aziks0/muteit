@@ -7,6 +7,7 @@ mod device_selector;
 mod hotkey_binding;
 mod tray_icon;
 
+use alone::is_alone;
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::{Icon, UserAttentionType};
@@ -184,6 +185,10 @@ fn InfallibleApp() -> Element {
 }
 
 fn main() {
+    if !is_alone!("d0ee1f1a-950c-439e-a8fc-82252585a2e3").expect("CreateMutexW to work") {
+        return;
+    }
+
     let small_icon = Icon::from_rgba(MUTEIT_SMALL_ICON_RGBA.to_vec(), 32, 32)
         .expect("muteit_32px.bin should be a correct icon");
     let big_icon = Icon::from_rgba(MUTEIT_BIG_ICON_RGBA.to_vec(), 48, 48)

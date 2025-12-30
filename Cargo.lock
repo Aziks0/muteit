@@ -2642,6 +2642,7 @@ dependencies = [
 name = "muteit"
 version = "0.1.0"
 dependencies = [
+ "alone",
  "audio",
  "dioxus",
  "dioxus-signals",
