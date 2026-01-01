@@ -7,6 +7,9 @@ resolver = "3"
 members = ["crates/alone", "crates/audio", "crates/key-t", "crates/muteit"]
 default-members = ["crates/muteit"]
 
+# Same version needed for both.
+[workspace.dependencies.windows-core]
+version = "0.62.2"
 [workspace.dependencies.windows]
 version = "0.62.2"
 

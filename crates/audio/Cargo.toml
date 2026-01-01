@@ -11,6 +11,9 @@ license = "MPL-2.0"
 [dependencies]
 thiserror = "2.0.16"
 
+# We need it to use the `implement` macro.
+windows-core = { workspace = true }
+
 [dependencies.windows]
 workspace = true
 features = [

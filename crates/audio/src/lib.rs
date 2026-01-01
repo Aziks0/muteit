@@ -14,4 +14,6 @@ pub use enumerator::{DeviceEnumerator, DeviceInformation};
 mod error;
 pub use error::Error;
 
+pub mod events;
+
 pub type Result<T> = std::result::Result<T, Error>;
