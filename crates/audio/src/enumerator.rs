@@ -8,8 +8,9 @@ use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
+use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{
-    DEVICE_STATE_ACTIVE, IAudioSessionManager, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
+    DEVICE_STATE_ACTIVE, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
 };
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
@@ -268,7 +269,7 @@ where
                 Error::UnknownWindows(err)
             }
         })?;
-        let session_manager: IAudioSessionManager = device.Activate(CLSCTX_ALL, None)?;
-        Ok(Device::new(session_manager.GetSimpleAudioVolume(None, 0)?))
+        let interface: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None)?;
+        Ok(Device::new(interface))
     }
 }
