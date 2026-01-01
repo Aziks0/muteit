@@ -56,7 +56,7 @@ pub mod __private {
         // If the mutex exists already, `CreateMutexW` returns a valid handle and `GetLastError` returns
         // `ERROR_ALREADY_EXISTS`. If it's a new mutex, then there should be no error.
         // https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw#return-value
-        Ok(windows::core::Error::from_win32() != ERROR_ALREADY_EXISTS.into())
+        Ok(windows::core::Error::from_thread() != ERROR_ALREADY_EXISTS.into())
     }
 }
 
