@@ -6,6 +6,7 @@ mod config;
 mod device_selector;
 mod hotkey_binding;
 mod tray_icon;
+mod utils;
 
 use alone::is_alone;
 use dioxus::core::throw_error;
@@ -22,6 +23,7 @@ use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
 use crate::tray_icon::use_setup_tray;
+use crate::utils::toggle_mute;
 
 const MUTEIT_SMALL_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_32px.bin"));
 const MUTEIT_BIG_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_48px.bin"));
@@ -43,12 +45,6 @@ fn Tailwind() -> Element {
     rsx! {
         document::Style { {TAILWIND} }
     }
-}
-
-pub fn toggle_mute(device: &Device) -> Result<()> {
-    let muted = device.get_mute()?;
-    device.set_mute(!muted)?;
-    Ok(())
 }
 
 /// The main application component.

@@ -16,7 +16,7 @@ use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, windo
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
-use crate::toggle_mute;
+use crate::utils::toggle_mute;
 
 const SHOW_SETTINGS_EVENT_ID: &str = "muteit-show-settings";
 
