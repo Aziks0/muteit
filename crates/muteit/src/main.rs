@@ -21,7 +21,7 @@ use audio::{Device, DeviceEnumerator};
 use crate::config::{DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
-use crate::tray_icon::{TrayIcon, use_setup_tray};
+use crate::tray_icon::use_setup_tray;
 
 const MUTEIT_SMALL_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_32px.bin"));
 const MUTEIT_BIG_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_48px.bin"));
@@ -45,10 +45,9 @@ fn Tailwind() -> Element {
     }
 }
 
-pub fn toggle_mute(device: &Device, tray: &TrayIcon) -> Result<()> {
+pub fn toggle_mute(device: &Device) -> Result<()> {
     let muted = device.get_mute()?;
     device.set_mute(!muted)?;
-    tray.set_mute(!muted)?;
     Ok(())
 }
 
@@ -73,24 +72,7 @@ fn App() -> Element {
             .transpose()
     });
 
-    let tray = use_setup_tray(device)?;
-
-    use_effect(move || {
-        // TODO: replace by `try` block when stabilized.
-        // https://doc.rust-lang.org/std/ops/trait.Try.html
-        let inner = move || match *device.read() {
-            Ok(Some(ref device)) => {
-                let muted = device.get_mute()?;
-                tray.peek().set_mute(muted)
-            }
-            Ok(None) => tray.peek().set_none(),
-            Err(ref err) => Ok(Err(err.clone())?),
-        };
-
-        if let Err(err) = inner() {
-            throw_error(err);
-        };
-    });
+    use_setup_tray(device)?;
 
     let mut shortcut_handle = use_signal::<Option<ShortcutHandle>>(|| None);
 
@@ -105,7 +87,7 @@ fn App() -> Element {
                     if state == HotKeyState::Pressed
                         && let Ok(Some(ref device)) = *device.peek()
                     {
-                        if let Err(err) = toggle_mute(device, &*tray.peek()) {
+                        if let Err(err) = toggle_mute(device) {
                             throw_error(err);
                         }
                     }
