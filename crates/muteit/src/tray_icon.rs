@@ -155,6 +155,10 @@ pub fn use_setup_tray(
             button: MouseButton::Left,
             button_state: MouseButtonState::Down,
             ..
+        }
+        | TrayIconEvent::DoubleClick {
+            button: MouseButton::Left,
+            ..
         } = event
             && let Ok(Some(ref device)) = *device.peek()
         {
