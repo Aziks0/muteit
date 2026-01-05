@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use audio::Device;
 use dioxus::Result;
+
+use audio::Device;
 
 #[inline]
 pub fn toggle_mute(device: &Device) -> Result<()> {

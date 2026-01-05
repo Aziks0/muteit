@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use audio::DeviceEnumerator;
 use dioxus::prelude::*;
+
+use audio::DeviceEnumerator;
 
 use crate::config::DeviceInformation;
 

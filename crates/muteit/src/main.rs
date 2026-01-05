@@ -8,7 +8,6 @@ mod hotkey_binding;
 mod tray_icon;
 mod utils;
 
-use alone::is_alone;
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
 use dioxus::desktop::tao::window::{Icon, UserAttentionType};
@@ -17,6 +16,7 @@ use dioxus::desktop::{
 };
 use dioxus::prelude::*;
 
+use alone::is_alone;
 use audio::{Device, DeviceEnumerator};
 
 use crate::config::{DeviceInformation, use_config};

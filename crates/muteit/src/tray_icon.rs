@@ -6,7 +6,6 @@ use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-use audio::events::AudioEvents;
 use dioxus::core::throw_error;
 use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem};
 use dioxus::desktop::trayicon::{
@@ -15,6 +14,8 @@ use dioxus::desktop::trayicon::{
 use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, window};
 use dioxus::prelude::*;
 use tokio::sync::watch;
+
+use audio::events::AudioEvents;
 
 use crate::utils::toggle_mute;
 
