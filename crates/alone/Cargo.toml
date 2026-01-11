@@ -6,6 +6,7 @@
 name = "alone"
 version = "0.1.0"
 edition = "2024"
+license = "MPL-2.0"
 
 [dependencies]
 widestring = { version = "1.2.1", default-features = false }
