@@ -14,7 +14,12 @@ pub fn AutoStart() -> Element {
             .map(Rc::new)
             .map_err(Arc::new)
     })?;
-    let mut is_checked = use_hook(|| autostart.is_set().map(Signal::new).map_err(Arc::new))?;
+    let mut is_checked = use_hook(|| {
+        autostart
+            .is_set_autocorrect()
+            .map(Signal::new)
+            .map_err(Arc::new)
+    })?;
 
     rsx! {
         div { class: "mt-2 flex justify-between",

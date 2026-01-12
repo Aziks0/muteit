@@ -172,6 +172,7 @@ impl AutoStart {
     /// this method will return `false`.
     ///
     /// See also [`is_set`](Self::is_set) and [`is_set_autocorrect`](Self::is_set_autocorrect).
+    #[inline]
     pub fn is_set_strict(&self) -> Result<bool> {
         self.is_set_strict_with_autocorrect_optional(false)
     }
@@ -182,6 +183,7 @@ impl AutoStart {
     /// this method will correct the error and return `true`.
     ///
     /// See also [`is_set`](Self::is_set) and [`is_set_strict`](Self::is_set_strict).
+    #[inline]
     pub fn is_set_autocorrect(&self) -> Result<bool> {
         self.is_set_strict_with_autocorrect_optional(true)
     }
