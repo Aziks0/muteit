@@ -29,3 +29,7 @@ features = ["desktop"]
 [patch.crates-io]
 dioxus = { git = "https://github.com/Aziks0/dioxus.git", tag = "v0.7.2-rc.0.1" }
 dioxus-signals = { git = "https://github.com/Aziks0/dioxus.git", tag = "v0.7.2-rc.0.1" }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
