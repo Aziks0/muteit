@@ -4,7 +4,7 @@
 
 use std::ffi::{OsStr, c_void};
 
-use windows::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS};
+use windows::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_SUCCESS};
 use windows::Win32::System::Registry::{
     HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
 };
@@ -55,7 +55,7 @@ macro_rules! AutoStart {
 impl AutoStart {
     /// Construct a new [`AutoStart`].
     ///
-    /// If `app_name` is not specified, the app name will be the current executable name without the
+    /// If `app_name` is `None`, the app name will be the _runtime_ executable name without the
     /// `.exe`.
     ///
     /// See also the [`AutoStart!`](AutoStart!) macro.
@@ -91,6 +91,9 @@ impl AutoStart {
     }
 
     /// Check if the program will open on startup.
+    ///
+    /// See also [`is_set_strict`](Self::is_set_strict) and
+    /// [`is_set_autocorrect`](Self::is_set_autocorrect).
     pub fn is_set(&self) -> Result<bool> {
         match unsafe {
             RegGetValueW(
@@ -107,6 +110,80 @@ impl AutoStart {
             ERROR_FILE_NOT_FOUND => Ok(false),
             err => Err(Error::GettingRegistryValue(err.into())),
         }
+    }
+
+    fn is_set_strict_with_autocorrect_optional(&self, autocorrect: bool) -> Result<bool> {
+        // We want the buffer to be the same size as our command. If the buffer is not large enough,
+        // we get a `ERROR_MORE_DATA`, and so we know for sure it won't match with our command.
+        // NOTE: The null char is not counted in `.len()`.
+        let buffer_capacity = self.command.len() + 1;
+        let mut buffer = Vec::<u16>::with_capacity(buffer_capacity);
+        // `pcbdata` wants the size in **bytes**.
+        let mut buffer_capacity_bytes = (buffer_capacity * std::mem::size_of::<u16>()) as u32;
+
+        // SAFETY: The buffer can be written to for at least `buffer_capacity_bytes` bytes.
+        match unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                SUB_KEY_PATH,
+                &self.app_name,
+                RRF_RT_REG_SZ,
+                None,
+                Some(buffer.as_mut_ptr() as _),
+                Some(&mut buffer_capacity_bytes),
+            )
+        } {
+            ERROR_SUCCESS => {
+                // `buffer_capacity_bytes` is now the len of the buffer, still in bytes, including
+                // the null char.
+                let buffer_len = buffer_capacity_bytes as usize / std::mem::size_of::<u16>();
+                if buffer_len == buffer_capacity {
+                    // SAFETY: `buffer_len == buffer_capacity` and `RegGetValueW` wrote `buffer_len`
+                    // UTF-16 chars.
+                    // NOTE: We remove the null char from the len. It won't overflow because we will
+                    // always have a non-empty command.
+                    unsafe { buffer.set_len(buffer_len - 1) };
+
+                    if *buffer == *self.command {
+                        // We've got a match, no need to autocorrect anything.
+                        return Ok(true);
+                    }
+                }
+
+                // Getting here means that the key exists, but the value did not match ours.
+
+                if autocorrect {
+                    self.set(true)?;
+                }
+
+                // We've either autocorrected it and now it's a match, or we didn't and so it's not
+                // a match. So autocorrect is equal to match.
+                Ok(autocorrect)
+            }
+            ERROR_FILE_NOT_FOUND => Ok(false),
+            ERROR_MORE_DATA => Ok(false),
+            err => Err(Error::GettingRegistryValue(err.into())),
+        }
+    }
+
+    /// Check if the program will open on startup.
+    ///
+    /// The path and args will be checked as well. If they do not match the current `AutoStart`,
+    /// this method will return `false`.
+    ///
+    /// See also [`is_set`](Self::is_set) and [`is_set_autocorrect`](Self::is_set_autocorrect).
+    pub fn is_set_strict(&self) -> Result<bool> {
+        self.is_set_strict_with_autocorrect_optional(false)
+    }
+
+    /// Check if the program will open on startup.
+    ///
+    /// The path and args will be checked as well. If they do not match the current `AutoStart`,
+    /// this method will correct the error and return `true`.
+    ///
+    /// See also [`is_set`](Self::is_set) and [`is_set_strict`](Self::is_set_strict).
+    pub fn is_set_autocorrect(&self) -> Result<bool> {
+        self.is_set_strict_with_autocorrect_optional(true)
     }
 
     /// Set if the program should open on startup.
