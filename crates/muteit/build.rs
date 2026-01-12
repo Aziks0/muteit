@@ -19,7 +19,7 @@ fn minify_tailwind() {
     println!("cargo::rerun-if-changed=assets/tailwind.css");
 
     // `include_str!()` adds the file to the dependency list, even if the code does not run (i.e.
-    // even if `debug_assertions` are present), so we prefer to read the file at runtime to avoid
+    // even if `bundle` feature is not selected), so we prefer to read the file at runtime to avoid
     // the build script running every time we make changes to our css.
     let source =
         fs::read_to_string("assets/tailwind.css").expect("`assets/tailwind.css` to be read");
@@ -123,7 +123,7 @@ fn main() {
 
     minify_js();
 
-    if !cfg!(debug_assertions) {
+    if cfg!(feature = "bundle") {
         minify_tailwind();
     }
 }

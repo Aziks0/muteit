@@ -22,6 +22,9 @@ audio = { path = "../audio" }
 autostart = { path = "../autostart" }
 key-t = { path = "../key-t" }
 
+[features]
+bundle = []
+
 [build-dependencies]
 image = { version = "0.25.9", default-features = false, features = [
   "png",

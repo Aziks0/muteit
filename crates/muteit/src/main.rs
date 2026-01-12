@@ -34,14 +34,14 @@ const MUTEIT_BIG_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mu
 
 // Bake tailwind into the binary only in release mode. We want to keep using dx `Asset` in debug to
 // get hotreloading.
-#[cfg(debug_assertions)]
+#[cfg(not(feature = "bundle"))]
 #[component]
 fn Tailwind() -> Element {
     rsx! {
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
     }
 }
-#[cfg(not(debug_assertions))]
+#[cfg(feature = "bundle")]
 #[component]
 fn Tailwind() -> Element {
     const TAILWIND: &str = include_str!(concat!(env!("OUT_DIR"), "/tailwind.css",));
@@ -137,7 +137,7 @@ fn App() -> Element {
 /// message.
 #[component]
 fn InfallibleApp() -> Element {
-    #[cfg(debug_assertions)]
+    #[cfg(not(feature = "bundle"))]
     dioxus::desktop::use_global_shortcut("Ctrl+Shift+I", |state| {
         if state == dioxus::desktop::HotKeyState::Pressed {
             dioxus::desktop::window().devtool();
