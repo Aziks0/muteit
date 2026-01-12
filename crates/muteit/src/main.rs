@@ -23,7 +23,7 @@ use alone::is_alone;
 use audio::{Device, DeviceEnumerator};
 
 use crate::autostart::AutoStart;
-use crate::config::{DeviceInformation, use_config};
+use crate::config::{AppConfig, DeviceInformation, use_config};
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
 use crate::tray_icon::use_setup_tray;
@@ -172,6 +172,8 @@ fn main() {
         return;
     }
 
+    // TODO: show an error message using `MessageBoxW`?
+    let config_dir = AppConfig::get_directory().unwrap();
     let is_autostart = args().rev().find(|arg| arg == "--autostart").is_some();
 
     let small_icon = Icon::from_rgba(MUTEIT_SMALL_ICON_RGBA.to_vec(), 32, 32)
@@ -194,6 +196,7 @@ fn main() {
                 .with_disable_context_menu(true)
                 .with_disable_drag_drop_handler(true)
                 .with_menu(None)
+                .with_data_directory(config_dir)
                 .with_close_behaviour(WindowCloseBehaviour::WindowHides),
         )
         .launch(InfallibleApp);

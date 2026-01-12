@@ -49,12 +49,12 @@ impl AppConfig {
         }
     }
 
-    /// Get the default location of the configuration file.
-    fn get_location() -> Result<PathBuf> {
-        static LOCATION: OnceLock<PathBuf> = OnceLock::new();
+    /// Get the default configuration directory location.
+    pub fn get_directory() -> Result<&'static PathBuf> {
+        static DIRECTORY: OnceLock<PathBuf> = OnceLock::new();
 
-        if let Some(path) = LOCATION.get() {
-            return Ok(path.to_owned());
+        if let Some(path) = DIRECTORY.get() {
+            return Ok(path);
         }
 
         let appdata =
@@ -76,10 +76,19 @@ impl AppConfig {
                     config_dir.to_string_lossy()
                 )
             })?;
-        }
+        };
 
+        Ok(DIRECTORY.get_or_init(|| config_dir))
+    }
+
+    /// Get the default configuration file location.
+    fn get_location() -> Result<&'static PathBuf> {
+        static LOCATION: OnceLock<PathBuf> = OnceLock::new();
+
+        let config_dir = Self::get_directory()?;
         let config_path = config_dir.join("config.toml");
-        Ok(LOCATION.get_or_init(|| config_path).to_owned())
+
+        Ok(LOCATION.get_or_init(|| config_path))
     }
 
     /// Load the configuration from the default location.
