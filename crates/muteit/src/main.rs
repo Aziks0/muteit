@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#![cfg_attr(feature = "bundle", windows_subsystem = "windows")]
+
 mod autostart;
 mod config;
 mod device_selector;
