@@ -15,7 +15,7 @@
 /// uniquely identifies your app), like a
 /// [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// let am_i_alone = is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").unwrap();
@@ -23,9 +23,17 @@
 ///     std::process::exit(0);
 /// }
 /// ```
+///
+/// ```ignore
+/// // The macro also accepts constant values and variables.
+/// let am_i_alone = is_alone!(env!("APP_ID"));
+/// let am_i_alone = is_alone!(concat!("it", " ", "works"));
+/// const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463e";
+/// let am_i_alone = is_alone!(APP_ID);
+/// ```
 #[macro_export]
 macro_rules! is_alone {
-    ($unique:literal) => {{
+    ($unique:expr) => {{
         const MUTEX_NAME_STR: &str = $crate::__private::concat!(r"Global\", $unique, "\0");
         const MUTEX_NAME_WSTR: &$crate::__private::Utf16Str =
             $crate::__private::utf16str!(MUTEX_NAME_STR);
@@ -40,7 +48,7 @@ macro_rules! is_alone {
 pub mod __private {
     // Re-export for macro.
     pub use crate::is_alone;
-    pub use std::concat;
+    pub use constcat::concat;
     pub use widestring::{Utf16Str, utf16str};
     pub use windows::core::PCWSTR;
 
@@ -75,5 +83,13 @@ mod tests {
         let am_i_alone =
             is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` to work");
         assert!(!am_i_alone)
+    }
+
+    #[test]
+    fn accept_constant() {
+        _ = is_alone!(env!("CARGO_PKG_NAME"));
+        _ = is_alone!(concat!("it", "should", "work"));
+        const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463e";
+        _ = is_alone!(APP_ID);
     }
 }
