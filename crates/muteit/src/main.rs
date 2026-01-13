@@ -170,7 +170,7 @@ fn InfallibleApp() -> Element {
 }
 
 fn main() {
-    if !is_alone!("d0ee1f1a-950c-439e-a8fc-82252585a2e3").expect("CreateMutexW to work") {
+    if !is_alone!(env!("MUTEX_ID")).expect("CreateMutexW to work") {
         return;
     }
 
