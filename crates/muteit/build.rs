@@ -14,6 +14,7 @@ use oxc::mangler::MangleOptions;
 use oxc::minifier::{CompressOptions, Minifier, MinifierOptions};
 use oxc::parser::Parser;
 use oxc::span::SourceType;
+use toml::Table;
 
 fn minify_tailwind() {
     println!("cargo::rerun-if-changed=assets/tailwind.css");
@@ -115,9 +116,26 @@ fn convert_images() {
     }
 }
 
+fn set_envs() {
+    println!("cargo::rerun-if-changed=env.toml");
+
+    let env_file = include_str!("env.toml");
+
+    let envs = env_file
+        .parse::<Table>()
+        .expect("env.toml to be a valid toml file");
+
+    for (key, value) in envs {
+        let value = value.as_str().expect("envs should be strings");
+        println!("cargo::rustc-env={}={}", key, value);
+    }
+}
+
 fn main() {
     // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
     // required. Avoid build script run at all cost.
+
+    set_envs();
 
     convert_images();
 

@@ -36,3 +36,8 @@ oxc = { version = "0.92.0", default-features = false, features = [
   "mangler",
   "minifier",
 ] }
+toml = { version = "0.9.5", default-features = false, features = [
+  "std",
+  "serde",
+  "parse",
+] }
