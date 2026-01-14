@@ -32,16 +32,16 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = ["MIT AND ISC"]
 
-# Our modifications are also released under ISC.
+# Our modifications are released under CC-BY-NC-SA-4.0. A "Creative Commons"
+# license is used because the work might not be considered "software" anymore.
 [[annotations]]
 path = [
   "crates/muteit/assets/mic-none.png",
-  "crates/muteit/assets/muteit_32px.ico",
-  "crates/muteit/assets/muteit_48px.ico",
+  "crates/muteit/assets/muteit_icon.ico",
 ]
 SPDX-FileCopyrightText = [
   "2013-2023 Cole Bemis as part of Feather",
   "2025 Lucide Contributors",
   "2025 Benjamin DIDIER <contact@aziks.aleeas.com>",
 ]
-SPDX-License-Identifier = ["MIT AND ISC"]
+SPDX-License-Identifier = ["MIT AND ISC AND CC-BY-NC-SA-4.0"]

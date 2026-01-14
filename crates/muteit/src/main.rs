@@ -15,7 +15,7 @@ use std::env::args;
 
 use dioxus::core::throw_error;
 use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
-use dioxus::desktop::tao::window::{Icon, UserAttentionType};
+use dioxus::desktop::tao::window::UserAttentionType;
 use dioxus::desktop::{
     Config, HotKeyState, LogicalSize, ShortcutHandle, WindowBuilder, WindowCloseBehaviour, window,
 };
@@ -30,9 +30,6 @@ use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
 use crate::tray_icon::use_setup_tray;
 use crate::utils::toggle_mute;
-
-const MUTEIT_SMALL_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_32px.bin"));
-const MUTEIT_BIG_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/muteit_48px.bin"));
 
 // Bake tailwind into the binary only in release mode. We want to keep using dx `Asset` in debug to
 // get hotreloading.
@@ -178,10 +175,8 @@ fn main() {
     let config_dir = AppConfig::get_directory().unwrap();
     let is_autostart = args().rev().find(|arg| arg == "--autostart").is_some();
 
-    let small_icon = Icon::from_rgba(MUTEIT_SMALL_ICON_RGBA.to_vec(), 32, 32)
-        .expect("muteit_32px.bin should be a correct icon");
-    let big_icon = Icon::from_rgba(MUTEIT_BIG_ICON_RGBA.to_vec(), 48, 48)
-        .expect("muteit_48px.bin should be a correct icon");
+    let small_icon = utils::get_small_icon();
+    let big_icon = utils::get_big_icon();
 
     LaunchBuilder::desktop()
         .with_cfg(

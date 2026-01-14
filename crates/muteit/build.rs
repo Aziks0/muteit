@@ -15,6 +15,7 @@ use oxc::minifier::{CompressOptions, Minifier, MinifierOptions};
 use oxc::parser::Parser;
 use oxc::span::SourceType;
 use toml::Table;
+use winresource::WindowsResource;
 
 fn minify_tailwind() {
     println!("cargo::rerun-if-changed=assets/tailwind.css");
@@ -103,17 +104,19 @@ fn convert_image_to_rgba(path: &Path) {
 }
 
 fn convert_images() {
-    let files = [
-        "mic-none.png",
-        "mic-off.png",
-        "mic.png",
-        "muteit_32px.ico",
-        "muteit_48px.ico",
-    ];
+    let files = ["mic-none.png", "mic-off.png", "mic.png"];
     for file in files {
         let path = Path::new("assets").join(file);
         convert_image_to_rgba(path.as_path());
     }
+}
+
+fn set_resource() {
+    println!("cargo::rerun-if-changed=assets/muteit_icon.ico");
+
+    let mut res = WindowsResource::new();
+    res.set_icon("assets/muteit_icon.ico");
+    res.compile().expect("resource file to compile");
 }
 
 fn set_envs() {
@@ -136,6 +139,7 @@ fn main() {
     // required. Avoid build script run at all cost.
 
     set_envs();
+    set_resource();
 
     convert_images();
 
