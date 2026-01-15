@@ -24,7 +24,17 @@ version = "0.62.2"
 
 [workspace.dependencies.dioxus]
 version = "0.7.2-rc.0.1"
-features = ["desktop"]
+default-features = false
+features = [
+  "macro",
+  "html",
+  "signals",
+  "hooks",
+  "document",
+  "asset",
+  "launch",
+  "desktop",
+]
 
 [patch.crates-io]
 dioxus = { git = "https://github.com/Aziks0/dioxus.git", tag = "v0.7.2-rc.0.1" }
