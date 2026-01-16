@@ -60,7 +60,9 @@ fn minify_tailwind() {
 fn minify_js() {
     println!("cargo::rerun-if-changed=assets/hotkey_binding.js");
 
-    let source = include_str!("assets/hotkey_binding.js");
+    let source = fs::read_to_string("assets/hotkey_binding.js")
+        .expect("`assets/hotkey_binding.js` to be read");
+    let source = &source;
 
     let allocator = Allocator::default();
     let parser_ret = Parser::new(&allocator, source, SourceType::mjs()).parse();
@@ -143,9 +145,8 @@ fn main() {
 
     convert_images();
 
-    minify_js();
-
     if cfg!(feature = "bundle") {
+        minify_js();
         minify_tailwind();
     }
 }

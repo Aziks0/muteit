@@ -14,6 +14,12 @@ use key_t::LogicalKey;
 
 use crate::config::HotkeyInformation;
 
+#[cfg(not(feature = "bundle"))]
+const SCRIPT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/hotkey_binding.js"
+));
+#[cfg(feature = "bundle")]
 const SCRIPT: &str = include_str!(concat!(env!("OUT_DIR"), "/hotkey_binding.js"));
 
 const FONT_NAME: &str = "JetBrainsMono-Regular.woff2";
