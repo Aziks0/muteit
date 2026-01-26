@@ -43,3 +43,5 @@ toml = { version = "0.9.5", default-features = false, features = [
   "parse",
 ] }
 winresource = { version = "0.1.29", default-features = false }
+
+minijinja = { workspace = true }

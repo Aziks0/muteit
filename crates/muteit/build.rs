@@ -8,6 +8,7 @@ use std::{env, fs};
 use lightningcss::printer::PrinterOptions;
 use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
 use lightningcss::targets::{Browsers, Targets};
+use minijinja::{Environment, UndefinedBehavior};
 use oxc::allocator::Allocator;
 use oxc::codegen::{Codegen, CodegenOptions, CommentOptions};
 use oxc::mangler::MangleOptions;
@@ -113,15 +114,53 @@ fn convert_images() {
     }
 }
 
-fn set_resource() {
+type Context = toml::map::Map<String, toml::Value>;
+
+fn set_resource(mut ctx: Context) {
     println!("cargo::rerun-if-changed=assets/muteit_icon.ico");
 
     let mut res = WindowsResource::new();
-    res.set_icon("assets/muteit_icon.ico");
+
+    if cfg!(feature = "bundle") {
+        println!("cargo::rerun-if-changed=assets/bundle/resource.rc.jinja");
+
+        ctx.insert(
+            "VERSION_MAJOR".into(),
+            std::env::var("CARGO_PKG_VERSION_MAJOR").unwrap().into(),
+        );
+        ctx.insert(
+            "VERSION_MINOR".into(),
+            std::env::var("CARGO_PKG_VERSION_MINOR").unwrap().into(),
+        );
+        ctx.insert(
+            "VERSION_PATCH".into(),
+            std::env::var("CARGO_PKG_VERSION_PATCH").unwrap().into(),
+        );
+
+        let source = fs::read_to_string("assets/bundle/resource.rc.jinja")
+            .expect("`assets/bundle/resource.rc.jinja` to be read");
+
+        let mut env = Environment::empty();
+        env.set_undefined_behavior(UndefinedBehavior::Strict);
+        let resource = env
+            .render_str(&source, ctx)
+            .expect("resource template to be rendered");
+
+        let out_dir = env::var("OUT_DIR").unwrap();
+        let path = Path::new(&out_dir).join("resource.rc");
+        std::fs::write(&path, resource).expect("resource.rc to be written");
+
+        res.add_toolkit_include(true);
+        res.set_resource_file(path.to_str().unwrap());
+    } else {
+        // Just set the minimum resources required to make the app build, when not bundling.
+        res.set_icon("assets/muteit_icon.ico");
+    }
+
     res.compile().expect("resource file to compile");
 }
 
-fn set_envs() {
+fn set_envs() -> Context {
     println!("cargo::rerun-if-changed=env.toml");
 
     let env_file = include_str!("env.toml");
@@ -130,18 +169,20 @@ fn set_envs() {
         .parse::<Table>()
         .expect("env.toml to be a valid toml file");
 
-    for (key, value) in envs {
+    for (key, value) in &envs {
         let value = value.as_str().expect("envs should be strings");
         println!("cargo::rustc-env={}={}", key, value);
     }
+
+    envs
 }
 
 fn main() {
     // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
     // required. Avoid build script run at all cost.
 
-    set_envs();
-    set_resource();
+    let ctx = set_envs();
+    set_resource(ctx);
 
     convert_images();
 

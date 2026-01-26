@@ -1,0 +1,42 @@
+// SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+//
+// SPDX-License-Identifier: MPL-2.0
+
+// NOTE: Use paths relative to `CARGO_MANIFEST_DIR`.
+
+#include <winver.h>
+
+#define VERSION {{ VERSION_MAJOR }},{{ VERSION_MINOR }},{{ VERSION_PATCH }},0
+#define VERSION_STR "{{ VERSION_MAJOR }}.{{ VERSION_MINOR }}.{{ VERSION_PATCH }}"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VERSION
+PRODUCTVERSION  VERSION
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904b0" // `0409` = English and `04b0` = Unicode
+        {
+            VALUE "CompanyName",        "{{ COMPANY_NAME }}"
+            VALUE "FileDescription",    "{{ NAME }}"
+            VALUE "FileVersion",        VERSION_STR
+            VALUE "InternalName",       "{{ NAME }}"
+            VALUE "LegalCopyright",     "{{ COPYRIGHT }}"
+            VALUE "OriginalFilename",   "{{ NAME }}.exe"
+            VALUE "ProductName",        "{{ NAME }}"
+            VALUE "ProductVersion",     VERSION_STR
+        }
+    }
+        
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x0409, 0x04b0
+    }
+}
+
+1 ICON "assets/muteit_icon.ico"
