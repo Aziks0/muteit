@@ -57,11 +57,11 @@ impl AppConfig {
             return Ok(path);
         }
 
-        let appdata =
-            std::env::var_os("APPDATA").context("APPDATA environment variable is not set.")?;
+        let appdata = std::env::var_os("LOCALAPPDATA")
+            .context("LOCALAPPDATA environment variable is not set.")?;
         let appdata = PathBuf::from(appdata);
 
-        // Don't use `create_dir_all` so that we get an error if `%APPDATA%` points to a
+        // Don't use `create_dir_all` so that we get an error if `%LOCALAPPDATA%` points to a
         // non-existent directory.
         let config_dir = appdata.join("muteit!");
         if !config_dir.try_exists().with_context(|| {
