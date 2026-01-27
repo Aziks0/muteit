@@ -1,0 +1,12 @@
+{
+  "include": ["scripts/**/*.ts"],
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  "typeAcquisition": {
+    "enable": true
+  }
+}

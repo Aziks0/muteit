@@ -5,6 +5,7 @@
       "**/.json",
       "!!.jj",
       "!!target",
+      "scripts/**/*.ts",
       "crates/muteit/**/*.js",
       "crates/muteit/**/*.ts",
       "crates/muteit/**/*.css",
@@ -15,11 +16,44 @@
     "enabled": false
   },
   "linter": {
-    "enabled": true
+    "enabled": true,
+    "rules": {
+      "style": {
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["snake_case"]
+          }
+        },
+        "useNamingConvention": "error"
+      }
+    }
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space"
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              ":BUN:",
+              ":BLANK_LINE:",
+              ":NODE:",
+              ":BLANK_LINE:",
+              [":PACKAGE:", "*@*"],
+              ":BLANK_LINE:",
+              "./**",
+              ":BLANK_LINE:",
+              ":PATH:"
+            ]
+          }
+        }
+      }
+    }
   },
   "javascript": {
     "formatter": {
