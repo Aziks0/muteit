@@ -72,7 +72,7 @@ pub fn DeviceSelector(
                     class: "picker:border-black picker:bg-gray-800 picker:text-white",
                     onchange: move |event| {
                         let value = event.value().parse::<u32>().ok();
-                        on_select.call(value)
+                        on_select.call(value);
                     },
                     button {
                         class: "flex truncate",
