@@ -173,7 +173,7 @@ fn main() {
 
     // TODO: show an error message using `MessageBoxW`?
     let config_dir = AppConfig::get_directory().unwrap();
-    let is_autostart = args().rev().find(|arg| arg == "--autostart").is_some();
+    let is_hidden = args().rev().find(|arg| arg == "--hidden").is_some();
 
     let small_icon = utils::get_small_icon();
     let big_icon = utils::get_big_icon();
@@ -188,7 +188,7 @@ fn main() {
                         .with_inner_size(LogicalSize::new(800, 230))
                         .with_window_icon(Some(small_icon))
                         .with_taskbar_icon(Some(big_icon))
-                        .with_visible(!is_autostart),
+                        .with_visible(!is_hidden),
                 )
                 .with_disable_context_menu(true)
                 .with_disable_drag_drop_handler(true)
