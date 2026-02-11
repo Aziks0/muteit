@@ -160,8 +160,12 @@ impl AutoStart {
                 // a match. So autocorrect is equal to match.
                 Ok(autocorrect)
             }
-            ERROR_FILE_NOT_FOUND => Ok(false),
+            ERROR_MORE_DATA if autocorrect => {
+                self.set(true)?;
+                Ok(true)
+            }
             ERROR_MORE_DATA => Ok(false),
+            ERROR_FILE_NOT_FOUND => Ok(false),
             err => Err(Error::GettingRegistryValue(err.into())),
         }
     }
