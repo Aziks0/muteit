@@ -18,7 +18,7 @@ use oxc::span::SourceType;
 use toml::Table;
 use winresource::WindowsResource;
 
-fn minify_tailwind() {
+fn minify_tailwind(target_version: u32) {
     println!("cargo::rerun-if-changed=assets/tailwind.css");
 
     // `include_str!()` adds the file to the dependency list, even if the code does not run (i.e.
@@ -31,7 +31,7 @@ fn minify_tailwind() {
     // Edge >= 140
     let targets = Targets {
         browsers: Some(Browsers {
-            edge: Some(140 << 16),
+            edge: Some(target_version << 16),
             ..Default::default()
         }),
         ..Default::default()
@@ -187,12 +187,15 @@ fn main() {
     // required. Avoid build script run at all cost.
 
     let ctx = set_envs();
+    let target_version = ctx["WEBVIEW2_MINIMUM_VERSION"]
+        .as_integer()
+        .expect("`WEBVIEW2_MINIMUM_VERSION` to be a u32");
     set_resource(ctx);
 
     convert_images();
 
     if cfg!(feature = "bundle") {
         minify_js();
-        minify_tailwind();
+        minify_tailwind(target_version as _);
     }
 }
