@@ -169,8 +169,13 @@ fn set_envs() -> Context {
         .parse::<Table>()
         .expect("env.toml to be a valid toml file");
 
+    let mut temp = String::new();
     for (key, value) in &envs {
-        let value = value.as_str().expect("envs should be strings");
+        let value = value.as_str().unwrap_or_else(|| {
+            temp = value.to_string();
+            &temp
+        });
+
         println!("cargo::rustc-env={}={}", key, value);
     }
 
