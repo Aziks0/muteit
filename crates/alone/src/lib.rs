@@ -8,6 +8,9 @@
 //!
 //! See [is_alone!].
 
+#[cfg(not(target_os = "windows"))]
+compile_error!("This crate is only available on Windows.");
+
 /// Check if there is already an instance of your program running on the user's machine.
 ///
 /// This macro will return `false` if there is a program on the user's machine that has already
