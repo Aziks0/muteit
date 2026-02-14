@@ -34,7 +34,7 @@
 #[macro_export]
 macro_rules! is_alone {
     ($unique:expr) => {{
-        const MUTEX_NAME_STR: &str = $crate::__private::concat!(r"Global\", $unique, "\0");
+        const MUTEX_NAME_STR: &str = $crate::__private::concat!($unique, "\0");
         const MUTEX_NAME_WSTR: &$crate::__private::Utf16Str =
             $crate::__private::utf16str!(MUTEX_NAME_STR);
         const MUTEX_NAME_PTR: *const u16 = MUTEX_NAME_WSTR.as_ptr();

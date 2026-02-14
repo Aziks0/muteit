@@ -25,8 +25,8 @@ SetupIconFile={{ ICON_PATH }}
 UninstallDisplayIcon={{ '{#InstalledExePath}' }}
 
 AppId={{ APP_ID }}
-AppMutex=Global\{{ APP_ID }}
-SetupMutex=Global\{{ APP_ID }}-setup
+AppMutex={{ APP_ID }}
+SetupMutex={{ APP_ID }}-setup,Global\{{ APP_ID }}-setup
 
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
