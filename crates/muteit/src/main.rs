@@ -22,7 +22,8 @@ use dioxus::desktop::{
 use dioxus::prelude::*;
 
 use alone::is_alone;
-use audio::{Device, DeviceEnumerator};
+use audio::Device;
+use audio::enumerator::{DeviceEnumerator, Input};
 
 use crate::autostart::AutoStart;
 use crate::config::{AppConfig, DeviceInformation, use_config};
@@ -59,8 +60,9 @@ fn App() -> Element {
     // We don't care about returning early, blah blah blah, hook, whatever. If we can't get a hold
     // to the enumerator, something is **VERY** wrong, so just fail and ask the user to restart the
     // app.
-    let enumerator =
-        use_hook(|| DeviceEnumerator::try_new().map(|enumerator| Signal::new(enumerator)))?;
+    let enumerator = use_hook(|| {
+        DeviceEnumerator::<Input>::try_new().map(|enumerator| Signal::new(enumerator))
+    })?;
 
     let mut device = use_signal(|| {
         config

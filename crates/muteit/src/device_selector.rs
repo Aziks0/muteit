@@ -4,16 +4,19 @@
 
 use dioxus::prelude::*;
 
-use audio::DeviceEnumerator;
+use audio::enumerator::{DeviceEnumerator, Flow};
 
 use crate::config::DeviceInformation;
 
 #[component]
-pub fn DeviceSelector(
-    enumerator: WriteSignal<DeviceEnumerator>,
+pub fn DeviceSelector<F>(
+    enumerator: WriteSignal<DeviceEnumerator<F>>,
     on_select: Callback<Option<u32>>,
     default: Option<DeviceInformation>,
-) -> Element {
+) -> Element
+where
+    F: Flow + 'static,
+{
     let mut found_selected = default.is_none();
     let default = default.unwrap_or_default();
 

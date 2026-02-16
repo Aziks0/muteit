@@ -3,17 +3,19 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::fmt::Display;
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator, eCapture};
+use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
 
-use crate::{Device, Error, Result, State};
+use crate::enumerator::{Flow, State};
+use crate::{Device, Error, Result};
 
 /// Information about a device.
 ///
@@ -23,7 +25,8 @@ use crate::{Device, Error, Result, State};
 ///
 /// ```no_run
 /// # use audio::*;
-/// let enumerator = DeviceEnumerator::try_new()?;
+/// # use audio::enumerator::*;
+/// let enumerator = DeviceEnumerator::<Input>::try_new()?;
 /// let information: &DeviceInformation = &enumerator[0];
 ///
 /// // Print its name like you print any value:
@@ -42,8 +45,9 @@ use crate::{Device, Error, Result, State};
 ///
 /// ```no_run
 /// # use audio::*;
+/// # use audio::enumerator::*;
 /// # use std::ops::Index;
-/// let enumerator = DeviceEnumerator::try_new()?;
+/// let enumerator = DeviceEnumerator::<Input>::try_new()?;
 ///
 /// let device = Device::try_from(&enumerator[0])?;
 /// let device: Device = enumerator.index(0).try_into()?;
@@ -109,7 +113,8 @@ impl Drop for DeviceInformation {
 ///
 /// ```no_run
 /// # use audio::*;
-/// let enumerator = DeviceEnumerator::try_new()?;
+/// # use audio::enumerator::*;
+/// let enumerator = DeviceEnumerator::<Input>::try_new()?;
 ///
 /// for information in enumerator.iter() {
 ///     println!("{}", information);
@@ -122,7 +127,8 @@ impl Drop for DeviceInformation {
 ///
 /// ```no_run
 /// # use audio::*;
-/// let mut enumerator = DeviceEnumerator::try_new()?;
+/// # use audio::enumerator::*;
+/// let mut enumerator = DeviceEnumerator::<Input>::try_new()?;
 ///
 /// // Do some stuff...
 ///
@@ -134,33 +140,36 @@ impl Drop for DeviceInformation {
 ///
 /// ```no_run
 /// # use audio::*;
+/// # use audio::enumerator::*;
 /// # use std::ops::Index;
 /// // Using the enumerator:
-/// let enumerator = DeviceEnumerator::try_new()?;
+/// let enumerator = DeviceEnumerator::<Input>::try_new()?;
 /// let device = Device::try_from(&enumerator[0])?;
 /// let device: Device = enumerator.index(0).try_into()?;
 ///
 /// // Or, if you know the ID beforehand, you can directly get it:
 /// let device_id = String::from("...");
-/// let device = DeviceEnumerator::get_device_by_id(&device_id)?;
+/// let device = DeviceEnumerator::<Input>::get_device_by_id(&device_id)?;
 /// # Ok::<(), Error>(())
 /// ```
 ///
 /// [devices' information]: DeviceInformation
-pub struct DeviceEnumerator {
+pub struct DeviceEnumerator<F: Flow> {
     enumerator: Rc<IMMDeviceEnumerator>,
     endpoints: Vec<DeviceInformation>,
+    _marker: PhantomData<F>,
 }
 
-impl DeviceEnumerator {
+impl<F: Flow> DeviceEnumerator<F> {
     /// Create a new list of audio devices.
     ///
     /// # Examples
     ///
     /// ```no_run
     /// # use audio::*;
+    /// # use audio::enumerator::*;
     /// # use std::ops::Index;
-    /// let enumerator = DeviceEnumerator::try_new()?;
+    /// let enumerator = DeviceEnumerator::<Input>::try_new()?;
     ///
     /// // You can enumerate the devices' information:
     /// for information in enumerator.iter() {
@@ -195,7 +204,8 @@ impl DeviceEnumerator {
     ///
     /// ```no_run
     /// # use audio::*;
-    /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
+    /// # use audio::enumerator::*;
+    /// let mut enumerator = DeviceEnumerator::<Input>::try_new_with_empty_list()?;
     /// assert_eq!(enumerator.len(), 0);
     ///
     /// enumerator.refresh_with_state(State::Unplugged)?;
@@ -214,6 +224,7 @@ impl DeviceEnumerator {
         Ok(Self {
             enumerator: Rc::new(enumerator),
             endpoints: Vec::new(),
+            _marker: PhantomData,
         })
     }
 
@@ -225,13 +236,16 @@ impl DeviceEnumerator {
     ///
     /// ```no_run
     /// # use audio::*;
-    /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
+    /// # use audio::enumerator::*;
+    /// let mut enumerator = DeviceEnumerator::<Input>::try_new_with_empty_list()?;
     /// enumerator.refresh_with_state(State::Unplugged)?;
     /// # Ok::<_, Error>(())
     /// ```
     pub fn refresh_with_state(&mut self, state: State) -> Result<()> {
         unsafe {
-            let endpoints = self.enumerator.EnumAudioEndpoints(eCapture, state.into())?;
+            let endpoints = self
+                .enumerator
+                .EnumAudioEndpoints(F::DATA_FLOW, state.into())?;
 
             let count = endpoints.GetCount()?;
             self.endpoints.clear();
@@ -287,7 +301,7 @@ impl DeviceEnumerator {
     }
 }
 
-impl Deref for DeviceEnumerator {
+impl<F: Flow> Deref for DeviceEnumerator<F> {
     type Target = Vec<DeviceInformation>;
 
     fn deref(&self) -> &Self::Target {
