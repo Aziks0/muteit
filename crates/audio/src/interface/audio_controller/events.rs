@@ -12,9 +12,7 @@ use windows::Win32::Media::Audio::Endpoints::{
 };
 use windows::core::implement;
 
-// Re-export for `AudioEvents`.
-pub use windows::core::Error as WindowsError;
-pub use windows::core::Result as WindowsResult;
+use crate::WindowsResult;
 
 /// Implementations must follow these rules:
 ///     - The methods must be **non-blocking**. They should never wait on a synchronization
@@ -25,29 +23,31 @@ pub use windows::core::Result as WindowsResult;
 /// The implemented methods will be called by **different threads** than the one used for the
 /// subscription.
 #[allow(unused_variables)]
-pub trait AudioEvents: Send + Sync {
+pub trait AudioControllerEvents: Send + Sync {
     /// Called when mute state changes.
     fn on_mute_changed(&mut self, new_mute: bool) -> WindowsResult<()> {
         Ok(())
     }
 }
 
-struct InnerAudioEventProxy<Subscriber>
+pub(super) struct InnerAudioControllerEventProxy<Subscriber>
 where
-    Subscriber: AudioEvents + 'static,
+    Subscriber: AudioControllerEvents + 'static,
 {
     mute: windows::core::BOOL,
     subscriber: Subscriber,
 }
 
 #[implement(IAudioEndpointVolumeCallback)]
-pub(crate) struct AudioEventProxy<Subscriber>(UnsafeCell<InnerAudioEventProxy<Subscriber>>)
+pub(super) struct AudioControllerEventProxy<Subscriber>(
+    UnsafeCell<InnerAudioControllerEventProxy<Subscriber>>,
+)
 where
-    Subscriber: AudioEvents + 'static;
+    Subscriber: AudioControllerEvents + 'static;
 
-impl<Subscriber> IAudioEndpointVolumeCallback_Impl for AudioEventProxy_Impl<Subscriber>
+impl<Subscriber> IAudioEndpointVolumeCallback_Impl for AudioControllerEventProxy_Impl<Subscriber>
 where
-    Subscriber: AudioEvents + 'static,
+    Subscriber: AudioControllerEvents + 'static,
 {
     fn OnNotify(&self, data: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
         // NOTE: Calls to this callback are put in a queue by Windows. They are **not** called
@@ -80,11 +80,14 @@ where
     }
 }
 
-impl<Subscriber> AudioEventProxy<Subscriber>
+impl<Subscriber> AudioControllerEventProxy<Subscriber>
 where
-    Subscriber: AudioEvents + 'static,
+    Subscriber: AudioControllerEvents + 'static,
 {
-    pub(crate) fn new(mute: windows::core::BOOL, subscriber: Subscriber) -> Self {
-        Self(UnsafeCell::new(InnerAudioEventProxy { mute, subscriber }))
+    pub(super) fn new(mute: windows::core::BOOL, subscriber: Subscriber) -> Self {
+        Self(UnsafeCell::new(InnerAudioControllerEventProxy {
+            mute,
+            subscriber,
+        }))
     }
 }

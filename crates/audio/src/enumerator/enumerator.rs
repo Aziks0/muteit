@@ -9,13 +9,13 @@ use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
-use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
 
 use crate::enumerator::{Flow, State};
-use crate::{Device, Error, Result};
+use crate::interface::AudioInterface;
+use crate::{Error, Result};
 
 /// Information about a device.
 ///
@@ -40,28 +40,29 @@ use crate::{Device, Error, Result};
 /// # Ok::<(), Error>(())
 /// ```
 ///
-/// You can convert it to a [`Device`] by using either [`try_from`](TryFrom::try_from) or
+/// You can convert it to an [`AudioInterface`] by using either [`try_from`](TryFrom::try_from) or
 /// [`try_into`](TryInto::try_into):
 ///
 /// ```no_run
 /// # use audio::*;
 /// # use audio::enumerator::*;
+/// # use audio::interface::audio_controller::*;
 /// # use std::ops::Index;
 /// let enumerator = DeviceEnumerator::<Input>::try_new()?;
 ///
-/// let device = Device::try_from(&enumerator[0])?;
-/// let device: Device = enumerator.index(0).try_into()?;
+/// let controller = AudioController::try_from(&enumerator[0])?;
+/// let controller: AudioController = enumerator.index(0).try_into()?;
 /// # Ok::<(), Error>(())
 /// ```
 pub struct DeviceInformation {
     /// The unique identifier of the device.
-    id: PCWSTR,
+    pub(crate) id: PCWSTR,
     /// The name of the device.
     name: String,
     /// The state of the device.
     state: State,
     /// A reference to the enumerator.
-    enumerator: Rc<IMMDeviceEnumerator>,
+    pub(crate) enumerator: Rc<IMMDeviceEnumerator>,
 }
 
 impl DeviceInformation {
@@ -77,16 +78,6 @@ impl DeviceInformation {
     /// Get the state of the device.
     pub fn state(&self) -> State {
         self.state
-    }
-}
-
-// I'm not very fond of having an implementation for a type not in this file, but I prefer this over
-// making `get_device_by_id` and attributes of `DeviceInformation` `pub(crate)`.
-impl TryFrom<&DeviceInformation> for Device {
-    type Error = Error;
-
-    fn try_from(value: &DeviceInformation) -> std::result::Result<Self, Self::Error> {
-        get_device_by_id(&value.enumerator, value.id)
     }
 }
 
@@ -136,20 +127,21 @@ impl Drop for DeviceInformation {
 /// # Ok::<(), Error>(())
 /// ```
 ///
-/// And you can get a device:
+/// And you can get an interface:
 ///
 /// ```no_run
 /// # use audio::*;
 /// # use audio::enumerator::*;
+/// # use audio::interface::audio_controller::*;
 /// # use std::ops::Index;
 /// // Using the enumerator:
 /// let enumerator = DeviceEnumerator::<Input>::try_new()?;
-/// let device = Device::try_from(&enumerator[0])?;
-/// let device: Device = enumerator.index(0).try_into()?;
+/// let controller = AudioController::try_from(&enumerator[0])?;
+/// let controller: AudioController = enumerator.index(0).try_into()?;
 ///
 /// // Or, if you know the ID beforehand, you can directly get it:
 /// let device_id = String::from("...");
-/// let device = DeviceEnumerator::<Input>::get_device_by_id(&device_id)?;
+/// let controller: AudioController = DeviceEnumerator::<Input>::get_interface_by_id(&device_id)?;
 /// # Ok::<(), Error>(())
 /// ```
 ///
@@ -168,6 +160,7 @@ impl<F: Flow> DeviceEnumerator<F> {
     /// ```no_run
     /// # use audio::*;
     /// # use audio::enumerator::*;
+    /// # use audio::interface::audio_controller::*;
     /// # use std::ops::Index;
     /// let enumerator = DeviceEnumerator::<Input>::try_new()?;
     ///
@@ -177,8 +170,8 @@ impl<F: Flow> DeviceEnumerator<F> {
     ///     println!("{}", information);
     /// }
     ///
-    /// // And get the device you want:
-    /// let device: Device = enumerator.index(0).try_into()?;
+    /// // And get the interface you want:
+    /// let controller: AudioController = enumerator.index(0).try_into()?;
     /// # Ok::<(), Error>(())
     /// ```
     ///
@@ -286,18 +279,30 @@ impl<F: Flow> DeviceEnumerator<F> {
         self.refresh_with_state(State::Active)
     }
 
-    /// Get a device using its ID.
-    pub fn get_device(&self, id: impl AsRef<str>) -> Result<Device> {
-        get_device_by_id(&self.enumerator, &HSTRING::from(id.as_ref()))
+    /// Get an interface for a device using its ID.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use audio::*;
+    /// # use audio::enumerator::*;
+    /// # use audio::interface::audio_controller::*;
+    /// let enumerator = DeviceEnumerator::<Input>::try_new()?;
+    /// let device = &enumerator[0];
+    /// let controller: AudioController = enumerator.get_interface(device.get_id())?;
+    /// # Ok::<(), Error>(())
+    /// ```
+    pub fn get_interface<I: AudioInterface>(&self, id: impl AsRef<str>) -> Result<I> {
+        get_interface_by_id::<_, I>(&self.enumerator, &HSTRING::from(id.as_ref()))
     }
 
-    /// Get a device using its ID.
+    /// Get an interface for a device using its ID.
     ///
     /// # Notes:
     ///
     /// COM has to be initialized for the calling thread before calling this method.
-    pub fn get_device_by_id(id: impl AsRef<str>) -> Result<Device> {
-        Self::try_new_with_empty_list()?.get_device(id)
+    pub fn get_interface_by_id<I: AudioInterface>(id: impl AsRef<str>) -> Result<I> {
+        Self::try_new_with_empty_list()?.get_interface::<I>(id)
     }
 }
 
@@ -309,9 +314,10 @@ impl<F: Flow> Deref for DeviceEnumerator<F> {
     }
 }
 
-fn get_device_by_id<P>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<Device>
+pub(crate) fn get_interface_by_id<P, I>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<I>
 where
     P: windows::core::Param<PCWSTR>,
+    I: AudioInterface,
 {
     unsafe {
         let device = enumerator.GetDevice(id).map_err(|err| {
@@ -326,7 +332,7 @@ where
                 Error::UnknownWindows(err)
             }
         })?;
-        let interface: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None)?;
-        Ok(Device::new(interface))
+        let interface: I::Interface = device.Activate(CLSCTX_ALL, None)?;
+        Ok(I::new(interface))
     }
 }

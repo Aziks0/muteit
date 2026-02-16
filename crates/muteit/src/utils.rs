@@ -10,12 +10,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, SM_CXICON, SM_CXSMICON, SYSTEM_METRICS_INDEX,
 };
 
-use audio::Device;
+use audio::interface::audio_controller::AudioController;
 
 #[inline]
-pub fn toggle_mute(device: &Device) -> Result<()> {
-    let muted = device.get_mute()?;
-    device.set_mute(!muted)?;
+pub fn toggle_mute(controller: &AudioController) -> Result<()> {
+    let muted = controller.get_mute()?;
+    controller.set_mute(!muted)?;
     Ok(())
 }
 

@@ -22,8 +22,8 @@ use dioxus::desktop::{
 use dioxus::prelude::*;
 
 use alone::is_alone;
-use audio::Device;
 use audio::enumerator::{DeviceEnumerator, Input};
+use audio::interface::audio_controller::AudioController;
 
 use crate::autostart::AutoStart;
 use crate::config::{AppConfig, DeviceInformation, use_config};
@@ -64,16 +64,16 @@ fn App() -> Element {
         DeviceEnumerator::<Input>::try_new().map(|enumerator| Signal::new(enumerator))
     })?;
 
-    let mut device = use_signal(|| {
+    let mut controller = use_signal(|| {
         config
             .information
             .peek()
             .as_ref()
-            .map(|information| enumerator.peek().get_device(information.id.clone()))
+            .map(|information| enumerator.peek().get_interface(information.id.clone()))
             .transpose()
     });
 
-    use_setup_tray(device)?;
+    use_setup_tray(controller)?;
 
     let mut shortcut_handle = use_signal::<Option<ShortcutHandle>>(|| None);
 
@@ -86,9 +86,9 @@ fn App() -> Element {
             Some(ref hotkey) => {
                 match window().create_shortcut(hotkey.hotkey, move |state| {
                     if state == HotKeyState::Pressed
-                        && let Ok(Some(ref device)) = *device.peek()
+                        && let Ok(Some(ref controller)) = *controller.peek()
                     {
-                        if let Err(err) = toggle_mute(device) {
+                        if let Err(err) = toggle_mute(controller) {
                             throw_error(err);
                         }
                     }
@@ -106,10 +106,10 @@ fn App() -> Element {
             div { class: "flex flex-col w-5/6 gap-2",
                 DeviceSelector {
                     on_select: move |i: Option<u32>| {
-                        let new_device = i
-                            .map(|i| Device::try_from(&enumerator.peek()[i as usize]))
+                        let new_controller = i
+                            .map(|i| AudioController::try_from(&enumerator.peek()[i as usize]))
                             .transpose();
-                        device.set(new_device);
+                        controller.set(new_controller);
 
                         let information = i
                             .map(|i| {

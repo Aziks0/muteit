@@ -15,7 +15,8 @@ use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, windo
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
-use audio::events::AudioEvents;
+use audio::interface::audio_controller::AudioController;
+use audio::interface::audio_controller::AudioControllerEvents;
 
 use crate::utils::toggle_mute;
 
@@ -63,8 +64,8 @@ struct Messenger {
     tx: watch::Sender<Message>,
 }
 
-impl AudioEvents for Messenger {
-    fn on_mute_changed(&mut self, new_mute: bool) -> audio::events::WindowsResult<()> {
+impl AudioControllerEvents for Messenger {
+    fn on_mute_changed(&mut self, new_mute: bool) -> audio::WindowsResult<()> {
         // `Sender` uses a `RwLock` internally, so using it here is _technically_ forbidden...
         // We live dangerously though.
         self.tx.send_if_modified(|message| {
@@ -142,7 +143,7 @@ impl TrayIcon {
 }
 
 pub fn use_setup_tray(
-    mut device: Signal<std::result::Result<Option<audio::Device>, audio::Error>>,
+    mut controller: Signal<std::result::Result<Option<AudioController>, audio::Error>>,
 ) -> Result<()> {
     let tray = use_hook(|| TrayIcon::try_new().map(|tray| Rc::new(tray)))?;
 
@@ -163,7 +164,7 @@ pub fn use_setup_tray(
             button: MouseButton::Left,
             ..
         } = event
-            && let Ok(Some(ref device)) = *device.peek()
+            && let Ok(Some(ref device)) = *controller.peek()
         {
             if let Err(err) = toggle_mute(device) {
                 throw_error(err);
@@ -204,14 +205,14 @@ pub fn use_setup_tray(
 
         // TODO: replace by `try` block when stabilized.
         // https://doc.rust-lang.org/std/ops/trait.Try.html
-        let mut inner = || match *device.write() {
-            Ok(Some(ref mut device)) => {
-                device.subscribe_event_notifications(Messenger {
+        let mut inner = || match *controller.write() {
+            Ok(Some(ref mut controller)) => {
+                controller.subscribe_event_notifications(Messenger {
                     device_id,
                     tx: tx.clone(),
                 })?;
 
-                let muted = device.get_mute()?;
+                let muted = controller.get_mute()?;
                 tx.send_if_modified(|state| {
                     // Only set the new icon if the `Messenger` we just got subscribed hasn't
                     // already done so. It should be next to impossible, but we check anyway.
@@ -245,7 +246,7 @@ pub fn use_setup_tray(
 
         // Subscribe to the `device` **after** the call to `write`. If we subscribe _before_, we
         // cause an infinite loop.
-        let _ = device.read();
+        let _ = controller.read();
     });
 
     Ok(())

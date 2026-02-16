@@ -4,8 +4,10 @@
 
 use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
 
-use crate::Result;
-use crate::events::{AudioEventProxy, AudioEvents};
+use crate::enumerator::{DeviceInformation, get_interface_by_id};
+use crate::interface::AudioInterface;
+use crate::interface::audio_controller::{AudioControllerEventProxy, AudioControllerEvents};
+use crate::{Error, Result};
 
 #[derive(Clone)]
 pub struct SubscriberId(IAudioEndpointVolumeCallback);
@@ -15,19 +17,12 @@ pub struct SubscriberId(IAudioEndpointVolumeCallback);
 ///
 /// [`IAudioEndpointVolume`]:
 ///     https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume
-pub struct Device {
+pub struct AudioController {
     interface: IAudioEndpointVolume,
     subscribers: Vec<IAudioEndpointVolumeCallback>,
 }
 
-impl Device {
-    pub(crate) fn new(interface: IAudioEndpointVolume) -> Self {
-        Self {
-            interface,
-            subscribers: Vec::new(),
-        }
-    }
-
+impl AudioController {
     /// Get whether the device is muted or not.
     pub fn get_mute(&self) -> Result<bool> {
         let result = unsafe { self.interface.GetMute()? }.as_bool();
@@ -45,16 +40,16 @@ impl Device {
     /// When `Self` gets dropped, the subscriber will be automatically unsubscribed. The returned
     /// value can be used to [unsubscribe](Self::unsubscribe_event_notifications) before that.
     ///
-    /// See [`AudioEvents`] for information on the implementation of `Subscriber`.
+    /// See [`AudioControllerEvents`] for information on the implementation of `Subscriber`.
     pub fn subscribe_event_notifications<Subscriber>(
         &mut self,
         subscriber: Subscriber,
     ) -> Result<SubscriberId>
     where
-        Subscriber: AudioEvents + 'static,
+        Subscriber: AudioControllerEvents + 'static,
     {
         let mute = unsafe { self.interface.GetMute()? };
-        let proxy = AudioEventProxy::new(mute, subscriber);
+        let proxy = AudioControllerEventProxy::new(mute, subscriber);
         let callback: IAudioEndpointVolumeCallback = proxy.into();
         unsafe { self.interface.RegisterControlChangeNotify(&callback)? }
 
@@ -78,10 +73,29 @@ impl Device {
     }
 }
 
-impl Drop for Device {
+impl Drop for AudioController {
     fn drop(&mut self) {
         for subscriber in &self.subscribers {
             let _ = unsafe { self.interface.UnregisterControlChangeNotify(subscriber) };
+        }
+    }
+}
+
+impl TryFrom<&DeviceInformation> for AudioController {
+    type Error = Error;
+
+    fn try_from(value: &DeviceInformation) -> std::result::Result<Self, Self::Error> {
+        get_interface_by_id::<_, Self>(&value.enumerator, value.id)
+    }
+}
+
+impl AudioInterface for AudioController {
+    type Interface = IAudioEndpointVolume;
+
+    fn new(interface: Self::Interface) -> Self {
+        Self {
+            interface,
+            subscribers: Vec::new(),
         }
     }
 }
