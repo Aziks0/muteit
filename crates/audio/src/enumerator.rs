@@ -9,13 +9,11 @@ use std::rc::Rc;
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-use windows::Win32::Media::Audio::{
-    DEVICE_STATE_ACTIVE, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture,
-};
+use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator, eCapture};
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
 
-use crate::{Device, Error, Result};
+use crate::{Device, Error, Result, State};
 
 /// Information about a device.
 ///
@@ -56,6 +54,8 @@ pub struct DeviceInformation {
     id: PCWSTR,
     /// The name of the device.
     name: String,
+    /// The state of the device.
+    state: State,
     /// A reference to the enumerator.
     enumerator: Rc<IMMDeviceEnumerator>,
 }
@@ -68,6 +68,11 @@ impl DeviceInformation {
         // the memory for us. We are responsible for freeing it, so the pointer should be valid
         // until we drop `self`.
         unsafe { self.id.to_string().unwrap() }
+    }
+
+    /// Get the state of the device.
+    pub fn state(&self) -> State {
+        self.state
     }
 }
 
@@ -193,7 +198,7 @@ impl DeviceEnumerator {
     /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
     /// assert_eq!(enumerator.len(), 0);
     ///
-    /// enumerator.refresh()?;
+    /// enumerator.refresh_with_state(State::Unplugged)?;
     /// for information in enumerator.iter() {
     ///     println!("{}", information);
     /// }
@@ -213,11 +218,20 @@ impl DeviceEnumerator {
     }
 
     /// Refresh the list of audio devices.
-    pub fn refresh(&mut self) -> Result<()> {
+    ///
+    /// This will only fetch devices that have the specified [`State`].
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use audio::*;
+    /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
+    /// enumerator.refresh_with_state(State::Unplugged)?;
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn refresh_with_state(&mut self, state: State) -> Result<()> {
         unsafe {
-            let endpoints = self
-                .enumerator
-                .EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE)?;
+            let endpoints = self.enumerator.EnumAudioEndpoints(eCapture, state.into())?;
 
             let count = endpoints.GetCount()?;
             self.endpoints.clear();
@@ -235,15 +249,27 @@ impl DeviceEnumerator {
                 let id = device.GetId()?;
                 let id = PCWSTR(id.0);
 
+                let state = device.GetState()?;
+
                 self.endpoints.push(DeviceInformation {
                     id,
                     name,
+                    state: state.into(),
                     enumerator: self.enumerator.clone(),
                 });
             }
         }
 
         Ok(())
+    }
+
+    /// Refresh the list of audio devices.
+    ///
+    /// This will only fetch active devices.
+    ///
+    /// See also [`refresh_with_state`](DeviceEnumerator::refresh_with_state).
+    pub fn refresh(&mut self) -> Result<()> {
+        self.refresh_with_state(State::Active)
     }
 
     /// Get a device using its ID.
