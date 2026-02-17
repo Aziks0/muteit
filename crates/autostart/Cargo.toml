@@ -9,6 +9,12 @@ edition = "2024"
 license = "MPL-2.0"
 publish = false
 
+[features]
+__test = []
+
 [dependencies]
 thiserror = { workspace = true }
 windows = { workspace = true, features = ["Win32_System_Registry"] }
+
+[dev-dependencies]
+autostart = { path = ".", features = ["__test"] }

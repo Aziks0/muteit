@@ -9,6 +9,9 @@ edition = "2024"
 license = "MPL-2.0"
 publish = false
 
+[features]
+__test = []
+
 [dependencies]
 constcat = "0.6.1"
 widestring = { version = "1.2.1", default-features = false }
@@ -16,3 +19,6 @@ windows = { workspace = true, features = [
   "Win32_Security",
   "Win32_System_Threading",
 ] }
+
+[dev-dependencies]
+alone = { path = ".", features = ["__test"] }

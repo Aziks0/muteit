@@ -20,18 +20,21 @@ compile_error!("This crate is only available on Windows.");
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
+/// # use alone::*;
 /// let am_i_alone = is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463a").unwrap();
 /// if !am_i_alone {
 ///     std::process::exit(0);
 /// }
 /// ```
 ///
-/// ```ignore
-/// // The macro also accepts constant values and variables.
+/// The macro also accepts constant values and variables:
+///
+/// ```
+/// # use alone::*;
 /// let am_i_alone = is_alone!(env!("APP_ID"));
 /// let am_i_alone = is_alone!(concat!("it", " ", "works"));
-/// const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463b";
+/// const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463c";
 /// let am_i_alone = is_alone!(APP_ID);
 /// ```
 #[macro_export]
@@ -76,15 +79,15 @@ mod tests {
     #[test]
     fn i_am_alone() {
         let am_i_alone =
-            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463c").expect("`CreateMutexW` to work");
+            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463d").expect("`CreateMutexW` to work");
         assert!(am_i_alone);
     }
 
     #[test]
     fn i_am_not_alone() {
-        let _ = is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463d").expect("`CreateMutexW` to work");
+        let _ = is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` to work");
         let am_i_alone =
-            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463d").expect("`CreateMutexW` to work");
+            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` to work");
         assert!(!am_i_alone)
     }
 
@@ -92,7 +95,7 @@ mod tests {
     fn accept_constant() {
         _ = is_alone!(env!("CARGO_PKG_NAME"));
         _ = is_alone!(concat!("it", "should", "work"));
-        const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463e";
+        const APP_ID: &str = "436a1306-cf3a-4b24-960f-dd1fe948463f";
         _ = is_alone!(APP_ID);
     }
 }

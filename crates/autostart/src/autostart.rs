@@ -23,7 +23,8 @@ pub struct AutoStart {
 ///
 /// This macro accepts a different number of patterns:
 ///
-/// ```ignore
+/// ```no_run
+/// # use autostart::*;
 /// // With no argument, the app name will be the environment variable `CARGO_BIN_NAME`
 /// // (i.e. the name of the binary currently being compiled), and there will be no args.
 /// let autostart = AutoStart!()?;
@@ -38,6 +39,7 @@ pub struct AutoStart {
 /// let autostart = AutoStart!(with "MyApp")?;
 /// let autostart = AutoStart!(with "MyApp", "--hidden")?;
 /// let autostart = AutoStart!(with "MyApp", "--hidden", "--silent")?;
+/// # Ok::<(), Error>(())
 /// ```
 #[macro_export]
 macro_rules! AutoStart {

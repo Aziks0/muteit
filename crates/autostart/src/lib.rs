@@ -8,11 +8,13 @@
 //!
 //! # Examples
 //!
-//! ```ignore
+//! ```no_run
+//! # use autostart::Error;
 //! use autostart::AutoStart;
 //!
 //! let autostart = AutoStart!("--hidden")?;
 //! autostart.set(true)?;
+//! # Ok::<(), Error>(())
 //! ```
 //!
 //! See [`AutoStart`] and the [`AutoStart!`](AutoStart!) macro for more information.

@@ -23,28 +23,33 @@ use crate::{Device, Error, Result};
 ///
 /// Because it implements [`Display`], you can get its name easily.
 ///
-/// ```ignore
+/// ```no_run
+/// # use audio::*;
 /// let enumerator = DeviceEnumerator::try_new()?;
-/// let information: &DeviceInformation = enumerator[0];
+/// let information: &DeviceInformation = &enumerator[0];
 ///
 /// // Print its name like you print any value:
-/// println!("Your device is called {}", information)
+/// println!("Your device is called {}", information);
 ///
 /// // Modify a copy of its name:
 /// let lower_case_name = information.to_string().to_lowercase();
 ///
 /// // Get a copy of its id:
 /// let id = information.get_id();
+/// # Ok::<(), Error>(())
 /// ```
 ///
 /// You can convert it to a [`Device`] by using either [`try_from`](TryFrom::try_from) or
 /// [`try_into`](TryInto::try_into):
 ///
-/// ```ignore
+/// ```no_run
+/// # use audio::*;
+/// # use std::ops::Index;
 /// let enumerator = DeviceEnumerator::try_new()?;
 ///
 /// let device = Device::try_from(&enumerator[0])?;
 /// let device: Device = enumerator.index(0).try_into()?;
+/// # Ok::<(), Error>(())
 /// ```
 pub struct DeviceInformation {
     /// The unique identifier of the device.
@@ -97,28 +102,34 @@ impl Drop for DeviceInformation {
 ///
 /// You can iterate over the devices' information using `iter`:
 ///
-/// ```ignore
+/// ```no_run
+/// # use audio::*;
 /// let enumerator = DeviceEnumerator::try_new()?;
 ///
 /// for information in enumerator.iter() {
 ///     println!("{}", information);
 /// }
+/// # Ok::<(), Error>(())
 ///
 /// ```
 ///
 /// If you want to refresh the list of devices:
 ///
-/// ```ignore
+/// ```no_run
+/// # use audio::*;
 /// let mut enumerator = DeviceEnumerator::try_new()?;
 ///
 /// // Do some stuff...
 ///
 /// enumerator.refresh();
+/// # Ok::<(), Error>(())
 /// ```
 ///
 /// And you can get a device:
 ///
-/// ```ignore
+/// ```no_run
+/// # use audio::*;
+/// # use std::ops::Index;
 /// // Using the enumerator:
 /// let enumerator = DeviceEnumerator::try_new()?;
 /// let device = Device::try_from(&enumerator[0])?;
@@ -127,6 +138,7 @@ impl Drop for DeviceInformation {
 /// // Or, if you know the ID beforehand, you can directly get it:
 /// let device_id = String::from("...");
 /// let device = DeviceEnumerator::get_device_by_id(&device_id)?;
+/// # Ok::<(), Error>(())
 /// ```
 ///
 /// [devices' information]: DeviceInformation
@@ -140,7 +152,9 @@ impl DeviceEnumerator {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use audio::*;
+    /// # use std::ops::Index;
     /// let enumerator = DeviceEnumerator::try_new()?;
     ///
     /// // You can enumerate the devices' information:
@@ -151,6 +165,7 @@ impl DeviceEnumerator {
     ///
     /// // And get the device you want:
     /// let device: Device = enumerator.index(0).try_into()?;
+    /// # Ok::<(), Error>(())
     /// ```
     ///
     /// See also [`DeviceInformation`].
@@ -173,7 +188,8 @@ impl DeviceEnumerator {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use audio::*;
     /// let mut enumerator = DeviceEnumerator::try_new_with_empty_list()?;
     /// assert_eq!(enumerator.len(), 0);
     ///
@@ -181,6 +197,7 @@ impl DeviceEnumerator {
     /// for information in enumerator.iter() {
     ///     println!("{}", information);
     /// }
+    /// # Ok::<(), Error>(())
     /// ```
     ///
     /// # Notes:

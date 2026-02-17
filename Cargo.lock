@@ -51,6 +51,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 name = "alone"
 version = "0.1.0"
 dependencies = [
+ "alone",
  "constcat",
  "widestring",
  "windows 0.62.2",
@@ -159,6 +160,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 name = "autostart"
 version = "0.1.0"
 dependencies = [
+ "autostart",
  "thiserror 2.0.16",
  "windows 0.62.2",
 ]
