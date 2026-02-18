@@ -15,6 +15,7 @@ use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, windo
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
+use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::{AudioController, AudioControllerEvents};
 
 use crate::utils::toggle_mute;
@@ -141,11 +142,20 @@ impl TrayIcon {
     }
 }
 
-pub fn use_setup_tray(mut controller: Signal<Option<AudioController>>) -> Result<()> {
+pub fn use_setup_tray(
+    mut enumerator: Signal<DeviceEnumerator<Input>>,
+    mut controller: Signal<Option<AudioController>>,
+) -> Result<()> {
     let tray = use_hook(|| TrayIcon::try_new().map(|tray| Rc::new(tray)))?;
 
-    use_muda_event_handler(|event| {
+    use_muda_event_handler(move |event| {
         if event.id() == SHOW_SETTINGS_EVENT_ID {
+            // Refresh the list of devices before showing the window.
+            if let Err(err) = enumerator.write().refresh() {
+                throw_error(err);
+                // Let the `ErrorBoundary` show the window if there is an error.
+                return;
+            }
             window().set_visible(true);
             window().set_focus();
         }

@@ -59,7 +59,7 @@ fn App() -> Element {
 
     let (enumerator, mut controller) = use_setup_device(config.information)?;
 
-    use_setup_tray(controller)?;
+    use_setup_tray(enumerator, controller)?;
 
     let mut shortcut_handle = use_signal::<Option<ShortcutHandle>>(|| None);
 
