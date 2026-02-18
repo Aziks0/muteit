@@ -9,11 +9,13 @@ use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
-use windows::Win32::Media::Audio::{IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator};
+use windows::Win32::Media::Audio::{
+    IMMDevice, IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
+};
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
 
-use crate::enumerator::{Flow, State};
+use crate::enumerator::{AudioDeviceEvents, AudioDeviceEventsProxy, Flow, State};
 use crate::interface::AudioInterface;
 use crate::{Error, Result};
 
@@ -93,6 +95,9 @@ impl Drop for DeviceInformation {
     }
 }
 
+#[derive(Clone)]
+pub struct SubscriberId(IMMNotificationClient);
+
 /// A list of audio devices.
 ///
 /// This should be used to iterate over the available [devices' information], but also to get one
@@ -149,6 +154,7 @@ impl Drop for DeviceInformation {
 pub struct DeviceEnumerator<F: Flow> {
     enumerator: Rc<IMMDeviceEnumerator>,
     endpoints: Vec<DeviceInformation>,
+    subscribers: Vec<IMMNotificationClient>,
     _marker: PhantomData<F>,
 }
 
@@ -217,6 +223,7 @@ impl<F: Flow> DeviceEnumerator<F> {
         Ok(Self {
             enumerator: Rc::new(enumerator),
             endpoints: Vec::new(),
+            subscribers: Vec::new(),
             _marker: PhantomData,
         })
     }
@@ -277,6 +284,48 @@ impl<F: Flow> DeviceEnumerator<F> {
     /// See also [`refresh_with_state`](DeviceEnumerator::refresh_with_state).
     pub fn refresh(&mut self) -> Result<()> {
         self.refresh_with_state(State::Active)
+    }
+
+    /// Subscribe to event notifications.
+    ///
+    /// When `Self` gets dropped, the subscriber will be automatically unsubscribed. The returned
+    /// value can be used to [unsubscribe](Self::unsubscribe_event_notifications) before that.
+    ///
+    /// See [`AudioDeviceEvents`] for information on the implementation of `Subscriber`.
+    pub fn subscribe_event_notifications<Subscriber>(
+        &mut self,
+        subscriber: Subscriber,
+    ) -> Result<SubscriberId>
+    where
+        Subscriber: AudioDeviceEvents + 'static,
+    {
+        let proxy = AudioDeviceEventsProxy::new(subscriber);
+        let callback: IMMNotificationClient = proxy.into();
+        unsafe {
+            self.enumerator
+                .RegisterEndpointNotificationCallback(&callback)?
+        }
+
+        self.subscribers.push(callback.clone());
+
+        Ok(SubscriberId(callback.clone()))
+    }
+
+    /// Unsubscribe from event notifications.
+    pub fn unsubscribe_event_notifications(&mut self, id: SubscriberId) -> Result<()> {
+        unsafe {
+            self.enumerator
+                .UnregisterEndpointNotificationCallback(&id.0)?
+        }
+
+        let index = self
+            .subscribers
+            .iter()
+            .position(|s| *s == id.0)
+            .expect("id should be in the list of subscribers");
+        self.subscribers.swap_remove(index);
+
+        Ok(())
     }
 
     /// Get an interface for a device using its ID.

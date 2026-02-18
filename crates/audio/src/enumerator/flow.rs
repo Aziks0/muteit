@@ -35,3 +35,26 @@ pub struct All;
 impl Flow for All {
     const DATA_FLOW: EDataFlow = eAll;
 }
+
+/// Audio data flow.
+pub enum FlowVariant {
+    /// Audio input.
+    ///
+    /// Data flows from the endpoint devices to the applications.
+    Input,
+    /// Audio output.
+    ///
+    /// Data flows from the applications to the endpoint devices.
+    Output,
+}
+
+#[allow(non_upper_case_globals)]
+impl From<EDataFlow> for FlowVariant {
+    fn from(value: EDataFlow) -> Self {
+        match value {
+            eCapture => FlowVariant::Input,
+            eRender => FlowVariant::Output,
+            _ => unreachable!("There are no other flow variant"),
+        }
+    }
+}
