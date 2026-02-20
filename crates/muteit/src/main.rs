@@ -73,7 +73,7 @@ fn App() -> Element {
             Some(ref hotkey) => {
                 match window().create_shortcut(hotkey.hotkey, move |state| {
                     if state == HotKeyState::Pressed
-                        && let Ok(Some(ref controller)) = *controller.peek()
+                        && let Some(ref controller) = *controller.peek()
                     {
                         if let Err(err) = toggle_mute(controller) {
                             throw_error(err);
@@ -95,7 +95,7 @@ fn App() -> Element {
                     on_select: move |i: Option<u32>| {
                         let new_controller = i
                             .map(|i| AudioController::try_from(&enumerator.peek()[i as usize]))
-                            .transpose();
+                            .transpose()?;
                         controller.set(new_controller);
 
                         let information = i
@@ -107,6 +107,8 @@ fn App() -> Element {
                                 }
                             });
                         config.information.set(information);
+
+                        Ok(())
                     },
                     default: information,
                     enumerator,

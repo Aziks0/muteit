@@ -9,22 +9,24 @@ use audio::interface::audio_controller::AudioController;
 
 use crate::config::DeviceInformation;
 
-pub type Controller = Result<Option<AudioController>, audio::Error>;
-
 pub fn use_setup_device(
     information: Signal<Option<DeviceInformation>>,
-) -> Result<(Signal<DeviceEnumerator<Input>>, Signal<Controller>)> {
+) -> Result<(
+    Signal<DeviceEnumerator<Input>>,
+    Signal<Option<AudioController>>,
+)> {
     let enumerator = use_hook(|| {
         DeviceEnumerator::<Input>::try_new().map(|enumerator| Signal::new(enumerator))
     })?;
 
-    let controller = use_signal(|| {
+    let controller = use_hook(|| {
         information
             .peek()
             .as_ref()
             .map(|information| enumerator.peek().get_interface(information.id.clone()))
             .transpose()
-    });
+            .map(|controller| Signal::new(controller))
+    })?;
 
     Ok((enumerator, controller))
 }

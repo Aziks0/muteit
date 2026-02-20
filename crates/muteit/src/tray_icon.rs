@@ -15,9 +15,8 @@ use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, windo
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
-use audio::interface::audio_controller::AudioControllerEvents;
+use audio::interface::audio_controller::{AudioController, AudioControllerEvents};
 
-use crate::device::Controller;
 use crate::utils::toggle_mute;
 
 const SHOW_SETTINGS_EVENT_ID: &str = "muteit-show-settings";
@@ -142,7 +141,7 @@ impl TrayIcon {
     }
 }
 
-pub fn use_setup_tray(mut controller: Signal<Controller>) -> Result<()> {
+pub fn use_setup_tray(mut controller: Signal<Option<AudioController>>) -> Result<()> {
     let tray = use_hook(|| TrayIcon::try_new().map(|tray| Rc::new(tray)))?;
 
     use_muda_event_handler(|event| {
@@ -162,7 +161,7 @@ pub fn use_setup_tray(mut controller: Signal<Controller>) -> Result<()> {
             button: MouseButton::Left,
             ..
         } = event
-            && let Ok(Some(ref device)) = *controller.peek()
+            && let Some(ref device) = *controller.peek()
         {
             if let Err(err) = toggle_mute(device) {
                 throw_error(err);
@@ -203,39 +202,40 @@ pub fn use_setup_tray(mut controller: Signal<Controller>) -> Result<()> {
 
         // TODO: replace by `try` block when stabilized.
         // https://doc.rust-lang.org/std/ops/trait.Try.html
-        let mut inner = || match *controller.write() {
-            Ok(Some(ref mut controller)) => {
-                controller.subscribe_event_notifications(Messenger {
-                    device_id,
-                    tx: tx.clone(),
-                })?;
-
-                let muted = controller.get_mute()?;
-                tx.send_if_modified(|state| {
-                    // Only set the new icon if the `Messenger` we just got subscribed hasn't
-                    // already done so. It should be next to impossible, but we check anyway.
-                    if state.device_id == device_id {
-                        return false;
-                    }
-
-                    *state = Message {
+        let mut inner = || -> Result<()> {
+            match *controller.write() {
+                Some(ref mut controller) => {
+                    controller.subscribe_event_notifications(Messenger {
                         device_id,
-                        state: muted.into(),
-                    };
+                        tx: tx.clone(),
+                    })?;
 
-                    true
-                });
+                    let muted = controller.get_mute()?;
+                    tx.send_if_modified(|state| {
+                        // Only set the new icon if the `Messenger` we just got subscribed hasn't
+                        // already done so. It should be next to impossible, but we check anyway.
+                        if state.device_id == device_id {
+                            return false;
+                        }
 
-                Ok(())
+                        *state = Message {
+                            device_id,
+                            state: muted.into(),
+                        };
+
+                        true
+                    });
+
+                    Ok(())
+                }
+                None => {
+                    tx.send_replace(Message {
+                        device_id,
+                        state: State::None,
+                    });
+                    Ok(())
+                }
             }
-            Ok(None) => {
-                tx.send_replace(Message {
-                    device_id,
-                    state: State::None,
-                });
-                Ok(())
-            }
-            Err(ref err) => Err(err.clone()),
         };
 
         if let Err(err) = inner() {
