@@ -6,6 +6,7 @@
 
 mod autostart;
 mod config;
+mod device;
 mod device_selector;
 mod hotkey_binding;
 mod tray_icon;
@@ -22,11 +23,11 @@ use dioxus::desktop::{
 use dioxus::prelude::*;
 
 use alone::is_alone;
-use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
 
 use crate::autostart::AutoStart;
 use crate::config::{AppConfig, DeviceInformation, use_config};
+use crate::device::use_setup_device;
 use crate::device_selector::DeviceSelector;
 use crate::hotkey_binding::HotkeyBinding;
 use crate::tray_icon::use_setup_tray;
@@ -57,21 +58,7 @@ fn App() -> Element {
     let mut config = use_config()?;
     let information = config.information.peek().clone();
 
-    // We don't care about returning early, blah blah blah, hook, whatever. If we can't get a hold
-    // to the enumerator, something is **VERY** wrong, so just fail and ask the user to restart the
-    // app.
-    let enumerator = use_hook(|| {
-        DeviceEnumerator::<Input>::try_new().map(|enumerator| Signal::new(enumerator))
-    })?;
-
-    let mut controller = use_signal(|| {
-        config
-            .information
-            .peek()
-            .as_ref()
-            .map(|information| enumerator.peek().get_interface(information.id.clone()))
-            .transpose()
-    });
+    let (enumerator, mut controller) = use_setup_device(config.information)?;
 
     use_setup_tray(controller)?;
 

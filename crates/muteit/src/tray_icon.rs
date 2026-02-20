@@ -15,9 +15,9 @@ use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, windo
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
-use audio::interface::audio_controller::AudioController;
 use audio::interface::audio_controller::AudioControllerEvents;
 
+use crate::device::Controller;
 use crate::utils::toggle_mute;
 
 const SHOW_SETTINGS_EVENT_ID: &str = "muteit-show-settings";
@@ -142,9 +142,7 @@ impl TrayIcon {
     }
 }
 
-pub fn use_setup_tray(
-    mut controller: Signal<std::result::Result<Option<AudioController>, audio::Error>>,
-) -> Result<()> {
+pub fn use_setup_tray(mut controller: Signal<Controller>) -> Result<()> {
     let tray = use_hook(|| TrayIcon::try_new().map(|tray| Rc::new(tray)))?;
 
     use_muda_event_handler(|event| {
