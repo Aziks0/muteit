@@ -56,7 +56,6 @@ fn Tailwind() -> Element {
 #[component]
 fn App() -> Element {
     let mut config = use_config()?;
-    let information = config.information.peek().clone();
 
     let (enumerator, mut controller) = use_setup_device(config.information)?;
 
@@ -110,7 +109,7 @@ fn App() -> Element {
 
                         Ok(())
                     },
-                    default: information,
+                    default: config.information.peek().clone(),
                     enumerator,
                 }
                 HotkeyBinding { hotkey: config.hotkey }
