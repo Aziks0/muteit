@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::E_INVALIDARG;
-use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator};
+use windows::Win32::Media::Audio::{IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
 use windows::core::{HRESULT, HSTRING, PCWSTR};
 
@@ -292,8 +292,23 @@ impl<F: Flow> DeviceEnumerator<F> {
     /// let controller: AudioController = enumerator.get_interface(device.get_id())?;
     /// # Ok::<(), Error>(())
     /// ```
+    ///
+    /// See also [`get_interface_and_state`](Self::get_interface_and_state).
     pub fn get_interface<I: AudioInterface>(&self, id: impl AsRef<str>) -> Result<I> {
         get_interface_by_id::<_, I>(&self.enumerator, &HSTRING::from(id.as_ref()))
+    }
+
+    /// Get an interface for a device, and its state, using its ID.
+    pub fn get_interface_and_state<I: AudioInterface>(
+        &self,
+        id: impl AsRef<str>,
+    ) -> Result<(I, State)> {
+        unsafe {
+            let device = get_device(&self.enumerator, &HSTRING::from(id.as_ref()))?;
+            let state = device.GetState()?.into();
+            let interface: I::Interface = device.Activate(CLSCTX_ALL, None)?;
+            Ok((I::new(interface), state))
+        }
     }
 
     /// Get an interface for a device using its ID.
@@ -301,8 +316,21 @@ impl<F: Flow> DeviceEnumerator<F> {
     /// # Notes:
     ///
     /// COM has to be initialized for the calling thread before calling this method.
+    ///
+    /// See also [`get_interface_and_state_by_id`](Self::get_interface_and_state_by_id).
     pub fn get_interface_by_id<I: AudioInterface>(id: impl AsRef<str>) -> Result<I> {
         Self::try_new_with_empty_list()?.get_interface::<I>(id)
+    }
+
+    /// Get an interface for a device, and its state, using its ID.
+    ///
+    /// # Notes:
+    ///
+    /// COM has to be initialized for the calling thread before calling this method.
+    pub fn get_interface_and_state_by_id<I: AudioInterface>(
+        id: impl AsRef<str>,
+    ) -> Result<(I, State)> {
+        Self::try_new_with_empty_list()?.get_interface_and_state::<I>(id)
     }
 }
 
@@ -314,13 +342,12 @@ impl<F: Flow> Deref for DeviceEnumerator<F> {
     }
 }
 
-pub(crate) fn get_interface_by_id<P, I>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<I>
+fn get_device<P>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<IMMDevice>
 where
     P: windows::core::Param<PCWSTR>,
-    I: AudioInterface,
 {
     unsafe {
-        let device = enumerator.GetDevice(id).map_err(|err| {
+        enumerator.GetDevice(id).map_err(|err| {
             // It is supposed to be `E_NOTFOUND`, but I couldn't find a reference to it in the
             // source code. The value is also used for `PEER_E_NOT_FOUND` so I prefer to only
             // check for this error for the `IMMDeviceEnumerator::GetDevice` method.
@@ -331,7 +358,17 @@ where
             } else {
                 Error::UnknownWindows(err)
             }
-        })?;
+        })
+    }
+}
+
+pub(crate) fn get_interface_by_id<P, I>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<I>
+where
+    P: windows::core::Param<PCWSTR>,
+    I: AudioInterface,
+{
+    unsafe {
+        let device = get_device(enumerator, id)?;
         let interface: I::Interface = device.Activate(CLSCTX_ALL, None)?;
         Ok(I::new(interface))
     }
