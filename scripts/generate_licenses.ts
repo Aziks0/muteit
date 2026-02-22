@@ -15,6 +15,7 @@ const nunjucks: typeof import('nunjucks') = await import('nunjucks@3.2.4');
 
 import { SetCwdWorkspace, TempDirectory } from './utils.module';
 
+import env from '../crates/muteit/env.toml';
 import ccBy from '../LICENSES/CC-BY-NC-SA-4.0.txt';
 import gpl from '../LICENSES/GPL-3.0-or-later.txt';
 import ofl from '../LICENSES/OFL-1.1.txt';
@@ -84,7 +85,7 @@ const checkCargoAboutVersion = async () => {
   const res = await $`cargo about --version`.text();
   const version = res.replace('cargo-about', '').trim();
 
-  if (!Bun.semver.satisfies(version, '0.x.x'))
+  if (!Bun.semver.satisfies(version, env.CARGO_ABOUT_VERSION))
     throw Error(`cargo-about version is ${version}`);
 };
 
