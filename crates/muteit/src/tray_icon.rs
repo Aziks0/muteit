@@ -65,6 +65,8 @@ struct Messenger {
 
 impl AudioEvents for Messenger {
     fn on_mute_changed(&mut self, new_mute: bool) -> audio::events::WindowsResult<()> {
+        // `Sender` uses a `RwLock` internally, so using it here is _technically_ forbidden...
+        // We live dangerously though.
         self.tx.send_if_modified(|message| {
             // Only send the message if we are the **last device** that was subscribed. It should be
             // next to impossible to get a `mute_changed` event **before** we get unsubscribed **AND
@@ -186,10 +188,6 @@ pub fn use_setup_tray(
                     break;
                 }
 
-                // NOTE: Current implementation of `Sender` uses a futex. Blocking in
-                // `on_mute_changed` is _technically_ forbidden to avoid deadlocks, so we should
-                // minimize the time borrowed so that the `Sender` only spin-loop to get the lock
-                // but never wait.
                 let Message { state, .. } = *rx.borrow_and_update();
 
                 if let Err(err) = tray.set_icon(state) {
@@ -214,8 +212,6 @@ pub fn use_setup_tray(
                 })?;
 
                 let muted = device.get_mute()?;
-                // NOTE: Minimize the time we hold the lock as much as possible to avoid waiting on
-                // it in `on_mute_changed`.
                 tx.send_if_modified(|state| {
                     // Only set the new icon if the `Messenger` we just got subscribed hasn't
                     // already done so. It should be next to impossible, but we check anyway.
