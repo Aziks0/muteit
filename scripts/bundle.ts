@@ -76,6 +76,7 @@ try {
 }
 
 console.log('Creating archive...');
+await $`cp README.md ${archiveDirectory}`;
 const archivePath = path.join(distDirectory, `${distName}.zip`);
 const filesGlob = `./${archiveDirectory}/*`;
 await $`7z a -mx9 ${archivePath} ${filesGlob}`.quiet();
