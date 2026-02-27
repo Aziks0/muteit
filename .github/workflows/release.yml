@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build-release:
+    name: "Build and release"
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+      - name: Install Bun
+        # v2.1.2
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup envs
+        run: bun run .github/scripts/get_envs.ts > $env:GITHUB_ENV
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@693c0353146ccbad39f1109436e0dca2f7e42185
+      - name: Install cargo-about
+        run: cargo binstall cargo-about@${{ env.CARGO_ABOUT_VERSION }}
+      - name: Run bundle script
+        run: bun run scripts/bundle.ts
+      - name: Create release
+        # v2.5.0
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          draft: true
+          make_latest: true
+          fail_on_unmatched_files: true
+          preserve_order: true
+          files: |
+            dist/*.exe
+            dist/*.zip
+            dist/LICENSES.md
+          token: ${{ secrets.GITHUB_TOKEN }}

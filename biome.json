@@ -9,7 +9,8 @@
       "crates/muteit/**/*.js",
       "crates/muteit/**/*.ts",
       "crates/muteit/**/*.css",
-      "!crates/muteit/assets/tailwind.css"
+      "!crates/muteit/assets/tailwind.css",
+      ".github/scripts/**/*.ts"
     ]
   },
   "vcs": {
