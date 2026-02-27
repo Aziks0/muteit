@@ -80,4 +80,8 @@ const archivePath = path.join(distDirectory, `${distName}.zip`);
 const filesGlob = `./${archiveDirectory}/*`;
 await $`7z a -mx9 ${archivePath} ${filesGlob}`.quiet();
 
+console.log('Finalizing...');
+const licenseFilePathDist = path.join(distDirectory, 'LICENSES.md');
+await $`mv ${licenseFilePath} ${licenseFilePathDist}`;
+
 console.log('Success');
