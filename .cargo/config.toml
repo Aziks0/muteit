@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
+[target.x86_64-pc-windows-msvc]
+# Remove the need for `vcruntime140.dll`.
+rustflags = ["-Ctarget-feature=+crt-static"]
