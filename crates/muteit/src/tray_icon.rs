@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::rc::Rc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use dioxus::core::throw_error;
 use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem};
@@ -16,7 +15,7 @@ use dioxus::prelude::*;
 use tokio::sync::watch;
 
 use audio::enumerator::{DeviceEnumerator, Input};
-use audio::interface::audio_controller::{AudioController, AudioControllerEvents};
+use audio::interface::audio_controller::{AudioController, AudioControllerEvents, AudioData};
 
 use crate::utils::toggle_mute;
 
@@ -60,12 +59,24 @@ struct Message {
 struct Messenger {
     /// The device ID associated with the notifier.
     device_id: usize,
+    /// The last known mute state.
+    last_muted: AtomicBool,
     /// The channel `Sender` to notify our tray.
     tx: watch::Sender<Message>,
 }
 
 impl AudioControllerEvents for Messenger {
-    fn on_mute_changed(&mut self, new_mute: bool) -> audio::WindowsResult<()> {
+    fn on_new_data(&self, data: AudioData) -> audio::WindowsResult<()> {
+        // Check if the event is related to a mute state change.
+        if let Err(_) = self.last_muted.compare_exchange(
+            !data.muted,
+            data.muted,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            return Ok(());
+        }
+
         // `Sender` uses a `RwLock` internally, so using it here is _technically_ forbidden...
         // We live dangerously though.
         self.tx.send_if_modified(|message| {
@@ -78,7 +89,7 @@ impl AudioControllerEvents for Messenger {
 
             *message = Message {
                 device_id: self.device_id,
-                state: new_mute.into(),
+                state: data.muted.into(),
             };
 
             true
@@ -215,12 +226,14 @@ pub fn use_setup_tray(
         let mut inner = || -> Result<()> {
             match *controller.write() {
                 Some(ref mut controller) => {
+                    let muted = controller.get_mute()?;
+
                     controller.subscribe_event_notifications(Messenger {
                         device_id,
+                        last_muted: AtomicBool::new(muted),
                         tx: tx.clone(),
                     })?;
 
-                    let muted = controller.get_mute()?;
                     tx.send_if_modified(|state| {
                         // Only set the new icon if the `Messenger` we just got subscribed hasn't
                         // already done so. It should be next to impossible, but we check anyway.

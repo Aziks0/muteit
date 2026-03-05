@@ -2,9 +2,6 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use std::cell::UnsafeCell;
-use std::ptr;
-
 use windows::Win32::Foundation::E_INVALIDARG;
 use windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA;
 use windows::Win32::Media::Audio::Endpoints::{
@@ -13,6 +10,20 @@ use windows::Win32::Media::Audio::Endpoints::{
 use windows::core::implement;
 
 use crate::WindowsResult;
+
+/// Device audio data.
+pub struct AudioData {
+    /// Is the device muted?
+    pub muted: bool,
+}
+
+impl From<AUDIO_VOLUME_NOTIFICATION_DATA> for AudioData {
+    fn from(value: AUDIO_VOLUME_NOTIFICATION_DATA) -> Self {
+        Self {
+            muted: value.bMuted.into(),
+        }
+    }
+}
 
 /// Implementations must follow these rules:
 ///     - The methods must be **non-blocking**. They should never wait on a synchronization
@@ -24,24 +35,16 @@ use crate::WindowsResult;
 /// subscription.
 #[allow(unused_variables)]
 pub trait AudioControllerEvents: Send + Sync {
-    /// Called when mute state changes.
-    fn on_mute_changed(&mut self, new_mute: bool) -> WindowsResult<()> {
+    /// Called when the device audio state changes.
+    ///
+    /// See [`AudioData`].
+    fn on_new_data(&self, new_data: AudioData) -> WindowsResult<()> {
         Ok(())
     }
 }
 
-pub(super) struct InnerAudioControllerEventProxy<Subscriber>
-where
-    Subscriber: AudioControllerEvents + 'static,
-{
-    mute: windows::core::BOOL,
-    subscriber: Subscriber,
-}
-
 #[implement(IAudioEndpointVolumeCallback)]
-pub(super) struct AudioControllerEventProxy<Subscriber>(
-    UnsafeCell<InnerAudioControllerEventProxy<Subscriber>>,
-)
+pub(super) struct AudioControllerEventProxy<Subscriber>(Subscriber)
 where
     Subscriber: AudioControllerEvents + 'static;
 
@@ -50,12 +53,6 @@ where
     Subscriber: AudioControllerEvents + 'static,
 {
     fn OnNotify(&self, data: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
-        // NOTE: Calls to this callback are put in a queue by Windows. They are **not** called
-        // concurrently. So no data race possible with `self`.
-
-        // SAFETY: The `UnsafeCell` got initialized by rust.
-        let mut this = unsafe { ptr::read(self.0.get()) };
-
         if data.is_null() {
             return Err(E_INVALIDARG.into());
         }
@@ -64,19 +61,9 @@ where
         // - We checked that the pointer was not null
         // - AUDIO_VOLUME_NOTIFICATION_DATA C struct is not packed
         // - We expect Windows to properly initialize the struct it gave us
-        let data = unsafe { data.read() };
+        let new_data = unsafe { data.read() };
 
-        let result = if this.mute != data.bMuted {
-            this.mute = data.bMuted;
-            this.subscriber.on_mute_changed(data.bMuted.as_bool())
-        } else {
-            Ok(())
-        };
-
-        // SAFETY: We write to the same memory location we previously read from.
-        unsafe { ptr::write(self.0.get(), this) };
-
-        result
+        self.0.on_new_data(new_data.into())
     }
 }
 
@@ -84,10 +71,7 @@ impl<Subscriber> AudioControllerEventProxy<Subscriber>
 where
     Subscriber: AudioControllerEvents + 'static,
 {
-    pub(super) fn new(mute: windows::core::BOOL, subscriber: Subscriber) -> Self {
-        Self(UnsafeCell::new(InnerAudioControllerEventProxy {
-            mute,
-            subscriber,
-        }))
+    pub(super) fn new(subscriber: Subscriber) -> Self {
+        Self(subscriber)
     }
 }

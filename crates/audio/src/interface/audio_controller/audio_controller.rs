@@ -48,8 +48,7 @@ impl AudioController {
     where
         Subscriber: AudioControllerEvents + 'static,
     {
-        let mute = unsafe { self.interface.GetMute()? };
-        let proxy = AudioControllerEventProxy::new(mute, subscriber);
+        let proxy = AudioControllerEventProxy::new(subscriber);
         let callback: IAudioEndpointVolumeCallback = proxy.into();
         unsafe { self.interface.RegisterControlChangeNotify(&callback)? }
 

@@ -40,7 +40,7 @@ struct Messenger {
 
 impl AudioDeviceEvents for Messenger {
     fn on_device_state_change(
-        &mut self,
+        &self,
         device_id: String,
         new_state: audio::enumerator::State,
     ) -> audio::WindowsResult<()> {
