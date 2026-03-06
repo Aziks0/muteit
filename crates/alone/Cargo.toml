@@ -13,12 +13,13 @@ publish = false
 __test = []
 
 [dependencies]
-constcat = "0.6.1"
-widestring = { version = "1.2.1", default-features = false }
 windows = { workspace = true, features = [
   "Win32_Security",
   "Win32_System_Threading",
 ] }
+
+constcat = "0.6.1"
+widestring = { version = "1.2.1", default-features = false }
 
 [dev-dependencies]
 alone = { path = ".", features = ["__test"] }

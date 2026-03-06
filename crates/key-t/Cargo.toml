@@ -17,6 +17,6 @@ workspace = true
 features = ["Win32_UI_Input_KeyboardAndMouse"]
 
 [build-dependencies]
-regex = "1.11.3"
-
 minijinja = { workspace = true }
+
+regex = "1.11.3"
