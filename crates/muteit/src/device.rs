@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
+
 use std::sync::{Arc, RwLock};
 
-use dioxus::core::throw_error;
+use dioxus::core::{anyhow, throw_error};
 use dioxus::prelude::*;
 use tokio::sync::watch;
 
@@ -28,10 +29,13 @@ impl From<audio::enumerator::State> for State {
     }
 }
 
+/// The message sent by our [`Messenger`].
 struct Message {
+    /// The new state of the device.
     state: State,
 }
 
+/// Messenger to send device state changes to update our controller.
 struct Messenger {
     /// The ID of the currently chosen device.
     device_id: Arc<RwLock<String>>,
@@ -44,7 +48,14 @@ impl AudioDeviceEvents for Messenger {
         device_id: String,
         new_state: audio::enumerator::State,
     ) -> audio::WindowsResult<()> {
-        if *self.device_id.read().expect("device id to not be poisoned") == device_id {
+        let Ok(our_device_id) = self.device_id.read() else {
+            crate::error::set(anyhow!(
+                "expected on_device_state_change device_id to not be poissened"
+            ));
+            return Ok(());
+        };
+
+        if *our_device_id == device_id {
             let _ = self.tx.send(Message {
                 state: new_state.into(),
             });

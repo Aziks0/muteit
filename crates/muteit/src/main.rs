@@ -8,6 +8,7 @@ mod autostart;
 mod config;
 mod device;
 mod device_selector;
+mod error;
 mod hotkey_binding;
 mod tray_icon;
 mod utils;
@@ -29,6 +30,7 @@ use crate::autostart::AutoStart;
 use crate::config::{AppConfig, DeviceInformation, use_config};
 use crate::device::use_setup_device;
 use crate::device_selector::DeviceSelector;
+use crate::error::use_setup_error;
 use crate::hotkey_binding::HotkeyBinding;
 use crate::tray_icon::use_setup_tray;
 use crate::utils::toggle_mute;
@@ -55,6 +57,8 @@ fn Tailwind() -> Element {
 /// The main application component.
 #[component]
 fn App() -> Element {
+    use_setup_error();
+
     let mut config = use_config()?;
 
     let (enumerator, mut controller) = use_setup_device(config.information)?;
