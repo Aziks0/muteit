@@ -9,6 +9,7 @@ members = [
   "crates/audio",
   "crates/autostart",
   "crates/key-t",
+  "crates/mpsc",
   "crates/muteit",
 ]
 default-members = ["crates/muteit"]

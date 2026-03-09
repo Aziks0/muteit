@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
+[package]
+name = "mpsc"
+version = "0.1.0"
+edition = "2024"
+license = "MPL-2.0"
+publish = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+
+[dependencies]
+crossbeam-utils = "0.8.21"
+futures-util = { version = "0.3.32", default-features = false }
+
+[target.'cfg(loom)'.dependencies]
+loom = { version = "0.7.2", features = ["futures"] }
+
+[dev-dependencies]
+futures-executor = "0.3.33"

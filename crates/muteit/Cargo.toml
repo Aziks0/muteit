@@ -15,7 +15,11 @@ autostart = { path = "../autostart" }
 key-t = { path = "../key-t" }
 
 dioxus = { workspace = true }
-windows = { workspace = true, features = ["Win32_UI_WindowsAndMessaging"] }
+windows = { workspace = true, features = [
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Security",
+  "Win32_System_Threading",
+] }
 
 dioxus-signals = { version = "0.7.2-rc.0.1", features = ["serialize"] }
 global-hotkey = { version = "0.7.0", features = ["serde"] }
