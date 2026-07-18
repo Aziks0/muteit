@@ -8,12 +8,12 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
-use windows::Win32::Foundation::E_INVALIDARG;
+use windows::Win32::Foundation::{E_INVALIDARG, ERROR_NOT_FOUND};
 use windows::Win32::Media::Audio::{
     IMMDevice, IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
 };
 use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
-use windows::core::{HRESULT, HSTRING, PCWSTR};
+use windows::core::{HSTRING, PCWSTR};
 
 use crate::enumerator::{AudioDeviceEvents, AudioDeviceEventsProxy, Flow, State};
 use crate::interface::AudioInterface;
@@ -397,10 +397,9 @@ where
 {
     unsafe {
         enumerator.GetDevice(id).map_err(|err| {
-            // It is supposed to be `E_NOTFOUND`, but I couldn't find a reference to it in the
-            // source code. The value is also used for `PEER_E_NOT_FOUND` so I prefer to only
-            // check for this error for the `IMMDeviceEnumerator::GetDevice` method.
-            if err.code() == HRESULT(0x80070490_u32 as i32) {
+            // The value is also used for `PEER_E_NOT_FOUND` so I prefer to only check for this
+            // error for the `IMMDeviceEnumerator::GetDevice` method.
+            if err.code() == ERROR_NOT_FOUND.to_hresult() {
                 Error::DeviceNotFound
             } else if err.code() == E_INVALIDARG {
                 Error::InvalidDeviceID
