@@ -6,8 +6,10 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use dioxus::Result;
-use dioxus::core::{AnyhowContext, use_drop, use_hook};
-use dioxus::desktop::HotKey;
+use dioxus::core::{AnyhowContext, use_hook};
+use dioxus::desktop::WindowEvent::CloseRequested;
+use dioxus::desktop::tao::event::Event::WindowEvent;
+use dioxus::desktop::{HotKey, use_wry_event_handler};
 use dioxus_signals::Signal;
 use serde::{Deserialize, Serialize};
 
@@ -133,12 +135,14 @@ impl AppConfig {
 /// [`AppConfig`] when first calling it (i.e. modifying one will **not** update the others).
 pub fn use_config() -> Result<AppConfig> {
     let config = use_hook::<Result<_>>(|| Ok(AppConfig::load()?))?;
-    use_drop(move || {
-        // This closure will be called in a `Drop::drop` so we should avoid a "double panic".
-        let res = config.save();
-        if !std::thread::panicking() {
-            res.unwrap();
-        }
+
+    use_wry_event_handler(move |event, _| match event {
+        WindowEvent {
+            event: CloseRequested,
+            ..
+        } => config.save().unwrap(),
+        _ => {}
     });
+
     Ok(config)
 }
