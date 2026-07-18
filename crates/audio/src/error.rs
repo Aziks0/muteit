@@ -4,6 +4,7 @@
 
 use windows::Win32::Foundation::{
     CO_E_NOTINITIALIZED, ERROR_DEVICE_REMOVED as ERROR_DEVICE_REMOVED_WIN32,
+    ERROR_NO_SUCH_DEVICE_INTERFACE as ERROR_NO_SUCH_DEVICE_INTERFACE_WIN32,
 };
 use windows::Win32::Media::Audio::AUDCLNT_E_DEVICE_INVALIDATED;
 use windows_core::HRESULT;
@@ -30,11 +31,14 @@ pub enum Error {
 impl From<windows::core::Error> for Error {
     fn from(error: windows::core::Error) -> Self {
         const ERROR_DEVICE_REMOVED: HRESULT = ERROR_DEVICE_REMOVED_WIN32.to_hresult();
+        const ERROR_NO_SUCH_DEVICE_INTERFACE: HRESULT =
+            ERROR_NO_SUCH_DEVICE_INTERFACE_WIN32.to_hresult();
 
         match error.code() {
             AUDCLNT_E_DEVICE_INVALIDATED => Self::DeviceInvalidated,
             ERROR_DEVICE_REMOVED => Self::DeviceInvalidated,
             CO_E_NOTINITIALIZED => Self::ComNotInitialized,
+            ERROR_NO_SUCH_DEVICE_INTERFACE => Self::DeviceNotFound,
             _ => Self::UnknownWindows(error),
         }
     }
