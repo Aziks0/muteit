@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{Arc, RwLock};
+use std::rc::Rc;
 
 use dioxus::core::{anyhow, throw_error};
 use dioxus::prelude::*;
-use tokio::sync::watch;
 
 use audio::enumerator::AudioDeviceEvents;
 use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
+use mpsc::Sender;
 
 use crate::config::DeviceInformation;
 
@@ -31,15 +31,15 @@ impl From<audio::enumerator::State> for State {
 
 /// The message sent by our [`Messenger`].
 struct Message {
+    /// The ID of the device that had its state changed.
+    device_id: String,
     /// The new state of the device.
     state: State,
 }
 
 /// Messenger to send device state changes to update our controller.
 struct Messenger {
-    /// The ID of the currently chosen device.
-    device_id: Arc<RwLock<String>>,
-    tx: watch::Sender<Message>,
+    tx: Sender<Message>,
 }
 
 impl AudioDeviceEvents for Messenger {
@@ -48,18 +48,12 @@ impl AudioDeviceEvents for Messenger {
         device_id: String,
         new_state: audio::enumerator::State,
     ) -> audio::WindowsResult<()> {
-        let Ok(our_device_id) = self.device_id.read() else {
-            crate::error::set(anyhow!(
-                "expected on_device_state_change device_id to not be poissened"
-            ));
-            return Ok(());
+        if let Err(_) = self.tx.try_send(Message {
+            device_id,
+            state: new_state.into(),
+        }) {
+            crate::error::set(anyhow!("on_device_state_change channel is full"));
         };
-
-        if *our_device_id == device_id {
-            let _ = self.tx.send(Message {
-                state: new_state.into(),
-            });
-        }
 
         Ok(())
     }
@@ -93,70 +87,42 @@ pub fn use_setup_device(
         get_controller(&enumerator.peek(), information.peek().as_ref()).map(Signal::new)
     })?;
 
-    let (tx, rx) = use_hook(|| {
-        // Dummy initial message. We don't care about it.
-        let (tx, mut rx) = watch::channel(Message {
-            state: State::Active,
-        });
-        rx.mark_unchanged();
+    let rx = use_hook(|| {
+        // The capacity of the channel is rather arbitrary. It just needs to be enough to avoid
+        // getting full.
+        let (tx, rx) = mpsc::channel::<Message>(32);
 
-        (tx, rx)
+        if let Err(err) = enumerator
+            .write()
+            .subscribe_event_notifications(Messenger { tx })
+        {
+            throw_error(err);
+        }
+
+        Rc::new(rx)
     });
 
     use_future(move || {
-        let mut rx = rx.clone();
+        let rx = rx.clone();
         async move {
             loop {
-                if rx.changed().await.is_err() {
-                    break;
-                }
+                let Message { state, device_id } = rx.receive().await;
 
-                let Message { state } = *rx.borrow_and_update();
-
-                match state {
-                    State::Inactive => controller.set(None),
-                    State::Active => {
-                        match get_controller(&enumerator.peek(), information.peek().as_ref()) {
-                            Ok(new_controller) => controller.set(new_controller),
-                            Err(err) => throw_error(err),
+                // Discard messages that are not for our device.
+                if let Some(information) = information.peek().as_ref()
+                    && information.id == device_id
+                {
+                    match state {
+                        State::Inactive => controller.set(None),
+                        State::Active => {
+                            match get_controller(&enumerator.peek(), Some(information)) {
+                                Ok(new_controller) => controller.set(new_controller),
+                                Err(err) => throw_error(err),
+                            }
                         }
                     }
                 }
             }
-        }
-    });
-
-    // Setup the messenger.
-    let device_id = use_hook(|| {
-        let device_id = information
-            .peek()
-            .as_ref()
-            .map(|information| information.id.clone())
-            .unwrap_or_default();
-        let device_id = Arc::new(RwLock::new(device_id));
-
-        if let Err(err) = enumerator.write().subscribe_event_notifications(Messenger {
-            device_id: device_id.clone(),
-            tx,
-        }) {
-            throw_error(err);
-        }
-
-        device_id
-    });
-
-    // Change the messenger's device ID when a new device is selected.
-    use_effect(move || {
-        let new_device_id = information.read();
-        let new_device_id = new_device_id
-            .as_ref()
-            .map(|information| information.id.as_str());
-
-        // We use an empty device ID as a way to signal that none is chosen.
-        let mut device_id = device_id.write().expect("`device_id` to not be poisoned");
-        device_id.clear();
-        if let Some(new_device_id) = new_device_id {
-            device_id.push_str(new_device_id);
         }
     });
 

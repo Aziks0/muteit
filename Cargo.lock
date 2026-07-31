@@ -2675,6 +2675,7 @@ dependencies = [
  "key-t",
  "lightningcss",
  "minijinja",
+ "mpsc",
  "oxc",
  "serde",
  "tokio",

@@ -13,6 +13,7 @@ alone = { path = "../alone" }
 audio = { path = "../audio" }
 autostart = { path = "../autostart" }
 key-t = { path = "../key-t" }
+mpsc = { path = "../mpsc/" }
 
 dioxus = { workspace = true }
 windows = { workspace = true, features = [
