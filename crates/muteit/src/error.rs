@@ -59,6 +59,7 @@ impl Error {
 }
 
 /// Set an error if it hasn't already been done.
+#[cold]
 pub fn set(error: impl Into<CapturedError>) {
     ERROR.set(error.into());
 }
