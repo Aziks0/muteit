@@ -13,8 +13,9 @@ publish = false
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [dependencies]
+futures-util = { workspace = true }
+
 crossbeam-utils = "0.8.21"
-futures-util = { version = "0.3.32", default-features = false }
 
 [target.'cfg(loom)'.dependencies]
 loom = { version = "0.7.2", features = ["futures"] }
