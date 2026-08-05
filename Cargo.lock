@@ -2678,7 +2678,6 @@ dependencies = [
  "mpsc",
  "oxc",
  "serde",
- "tokio",
  "toml 0.9.5",
  "windows 0.62.2",
  "winresource",

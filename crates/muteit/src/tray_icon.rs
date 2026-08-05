@@ -2,20 +2,21 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::cell::Cell;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use dioxus::core::throw_error;
+use dioxus::core::{anyhow, throw_error};
 use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem};
 use dioxus::desktop::trayicon::{
     Icon, MouseButton, MouseButtonState, TrayIcon as DioxusTrayIcon, TrayIconBuilder, TrayIconEvent,
 };
 use dioxus::desktop::{use_muda_event_handler, use_tray_icon_event_handler, window};
 use dioxus::prelude::*;
-use tokio::sync::watch;
 
 use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::{AudioController, AudioControllerEvents, AudioData};
+use mpsc::Sender;
 
 use crate::utils::toggle_mute;
 
@@ -25,10 +26,10 @@ const MIC_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic.bin")
 const MIC_OFF_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic-off.bin"));
 const MIC_NONE_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic-none.bin"));
 
-static DEVICE_COUNTER: AtomicUsize = AtomicUsize::new(usize::MAX);
+const CHANNEL_FULL_ERROR: &'static str = "tray_icon channel is full";
 
 /// Tray icon state.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum State {
     /// Device is muted.
     Mute,
@@ -47,53 +48,51 @@ impl From<bool> for State {
     }
 }
 
+impl Into<bool> for State {
+    fn into(self) -> bool {
+        match self {
+            Self::Mute => true,
+            Self::Unmute => false,
+            Self::None => unreachable!("Tried to convert `State::None` into bool."),
+        }
+    }
+}
+
 /// Message to update our tray icon.
+#[derive(Clone, Copy, Debug)]
 struct Message {
     /// The device ID of the messenger.
     device_id: usize,
     /// The state of the device.
     state: State,
+    /// Is this an initialization message?
+    is_initial: bool,
 }
 
 /// Messenger to send update to our tray.
 struct Messenger {
-    /// The device ID associated with the notifier.
+    /// The device ID associated with the messenger.
     device_id: usize,
     /// The last known mute state.
     last_muted: AtomicBool,
     /// The channel `Sender` to notify our tray.
-    tx: watch::Sender<Message>,
+    tx: Sender<Message>,
 }
 
 impl AudioControllerEvents for Messenger {
     fn on_new_data(&self, data: AudioData) -> audio::WindowsResult<()> {
         // Check if the event is related to a mute state change.
-        if let Err(_) = self.last_muted.compare_exchange(
-            !data.muted,
-            data.muted,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
+        if data.muted == self.last_muted.swap(data.muted, Ordering::Relaxed) {
             return Ok(());
         }
 
-        // `Sender` uses a `RwLock` internally, so using it here is _technically_ forbidden...
-        // We live dangerously though.
-        self.tx.send_if_modified(|message| {
-            // Only send the message if we are the **last device** that was subscribed. It should be
-            // next to impossible to get a `mute_changed` event **before** we get unsubscribed **AND
-            // after** the init message of the new device, but we check anyway.
-            if message.device_id != self.device_id {
-                return false;
-            }
-
-            *message = Message {
-                device_id: self.device_id,
-                state: data.muted.into(),
-            };
-
-            true
-        });
+        if let Err(_) = self.tx.try_send(Message {
+            device_id: self.device_id,
+            state: data.muted.into(),
+            is_initial: false,
+        }) {
+            crate::error::set(anyhow!(CHANNEL_FULL_ERROR));
+        };
 
         Ok(())
     }
@@ -191,23 +190,37 @@ pub fn use_setup_tray(
     });
 
     let (tx, rx) = use_hook(|| {
-        watch::channel(Message {
-            device_id: 0,
-            state: State::None,
-        })
+        // The capacity of the channel is rather arbitrary. It just needs to be enough to avoid
+        // getting full. For the channel to get full, the user would need to spam the mute button
+        // EXTREMELY rapidly—I consider it a user error.
+        let (tx, rx) = mpsc::channel(32);
+        (tx, Rc::new(rx))
     });
 
     // Change the tray icon when we receive a message.
     use_future(move || {
         let tray = tray.clone();
-        let mut rx = rx.clone();
+        let rx = rx.clone();
         async move {
+            let mut last_device_id = 0;
             loop {
-                if rx.changed().await.is_err() {
-                    break;
+                let Message {
+                    device_id,
+                    state,
+                    is_initial,
+                } = rx.receive().await;
+
+                // Avoid race between previous device messenger and new one.
+                if device_id < last_device_id {
+                    continue;
                 }
 
-                let Message { state, .. } = *rx.borrow_and_update();
+                // Avoid race between initial send and new device messenger.
+                if is_initial && device_id == last_device_id {
+                    continue;
+                }
+
+                last_device_id = device_id;
 
                 if let Err(err) = tray.set_icon(state) {
                     throw_error(err);
@@ -216,10 +229,14 @@ pub fn use_setup_tray(
         }
     });
 
+    // It doesn't need to be reactive.
+    let current_device_id = use_hook(|| Rc::new(Cell::new(0usize)));
+
     // Called when `device` changes. We need to change the tray icon accordingly and subscribe to
     // event notifications.
     use_effect(move || {
-        let device_id = DEVICE_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let device_id = current_device_id.get() + 1;
+        current_device_id.set(device_id);
 
         // TODO: replace by `try` block when stabilized.
         // https://doc.rust-lang.org/std/ops/trait.Try.html
@@ -234,28 +251,22 @@ pub fn use_setup_tray(
                         tx: tx.clone(),
                     })?;
 
-                    tx.send_if_modified(|state| {
-                        // Only set the new icon if the `Messenger` we just got subscribed hasn't
-                        // already done so. It should be next to impossible, but we check anyway.
-                        if state.device_id == device_id {
-                            return false;
-                        }
-
-                        *state = Message {
-                            device_id,
-                            state: muted.into(),
-                        };
-
-                        true
-                    });
+                    tx.try_send(Message {
+                        device_id,
+                        state: muted.into(),
+                        is_initial: true,
+                    })
+                    .map_err(|_| anyhow!(CHANNEL_FULL_ERROR))?;
 
                     Ok(())
                 }
                 None => {
-                    tx.send_replace(Message {
+                    tx.try_send(Message {
                         device_id,
                         state: State::None,
-                    });
+                        is_initial: true,
+                    })
+                    .map_err(|_| anyhow!(CHANNEL_FULL_ERROR))?;
                     Ok(())
                 }
             }
