@@ -99,7 +99,7 @@ const generate = async (): Promise<string> => {
   using _wd = await SetCwdWorkspace.new();
 
   // Different versions might give different outputs.
-  checkCargoAboutVersion();
+  await checkCargoAboutVersion();
 
   // `cargo-about` disallow stdout for powershell, so we have to use a file
   // instead.
