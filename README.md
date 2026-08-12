@@ -11,7 +11,7 @@
 
 Add a mute icon to your system tray.
 
-<!-- TODO: upload demo using Github -->
+<img width="320" height="58" alt="demo" src="https://github.com/user-attachments/assets/d9c36d74-3e35-4b13-b1c0-f58d8dbb85f3" />
 
 ## Features
 
