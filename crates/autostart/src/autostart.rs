@@ -65,7 +65,7 @@ impl AutoStart {
         app_name: Option<Name>,
         args: Option<&[Arg]>,
     ) -> Result<Self> {
-        let exe_path = std::env::current_exe().map_err(|err| Error::GettingExePath(err))?;
+        let exe_path = std::env::current_exe().map_err(Error::GettingExePath)?;
 
         let app_name: HSTRING = if let Some(app_name) = app_name {
             app_name.as_ref().into()
@@ -200,7 +200,7 @@ impl AutoStart {
             match if should_open {
                 // This is here to denote that every method call to `self.command` is a call on a
                 // slice of `u16`. So use `command` instead to make it explicit.
-                let command: &[u16] = &*self.command;
+                let command: &[u16] = &self.command;
 
                 // SAFETY: `lpdata` requires the string to be null terminated. Even though the slice
                 // given to us above stops before the null char, the char is still present in the

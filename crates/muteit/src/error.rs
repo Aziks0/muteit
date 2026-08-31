@@ -27,9 +27,10 @@ impl Error {
     /// Set an error if it hasn't already been done.
     fn set(&self, error: CapturedError) {
         let error = Box::into_raw(Box::new(error));
-        if let Err(_) =
-            self.error
-                .compare_exchange(ptr::null_mut(), error, Ordering::AcqRel, Ordering::Relaxed)
+        if self
+            .error
+            .compare_exchange(ptr::null_mut(), error, Ordering::AcqRel, Ordering::Relaxed)
+            .is_err()
         {
             // SAFETY: We created the box and turned it into raw just above.
             let _ = unsafe { Box::from_raw(error) };

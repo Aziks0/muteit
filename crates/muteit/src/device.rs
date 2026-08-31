@@ -48,10 +48,14 @@ impl AudioDeviceEvents for Messenger {
         device_id: String,
         new_state: audio::enumerator::State,
     ) -> audio::WindowsResult<()> {
-        if let Err(_) = self.tx.try_send(Message {
-            device_id,
-            state: new_state.into(),
-        }) {
+        if self
+            .tx
+            .try_send(Message {
+                device_id,
+                state: new_state.into(),
+            })
+            .is_err()
+        {
             crate::error::set(anyhow!("on_device_state_change channel is full"));
         };
 
@@ -73,6 +77,7 @@ fn get_controller(
     Ok(controller)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn use_setup_device(
     information: Signal<Option<DeviceInformation>>,
 ) -> Result<(

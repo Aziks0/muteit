@@ -99,7 +99,7 @@ impl AppConfig {
     fn load() -> Result<Self> {
         let config_path = Self::get_location()?;
 
-        let config_content = match std::fs::read(&config_path) {
+        let config_content = match std::fs::read(config_path) {
             Ok(content) => content,
             Err(err) => {
                 if err.kind() == std::io::ErrorKind::NotFound {
@@ -134,14 +134,16 @@ impl AppConfig {
 /// Only one component should call this hook, because they will each load and get a different
 /// [`AppConfig`] when first calling it (i.e. modifying one will **not** update the others).
 pub fn use_config() -> Result<AppConfig> {
-    let config = use_hook::<Result<_>>(|| Ok(AppConfig::load()?))?;
+    let config = use_hook::<Result<_>>(AppConfig::load)?;
 
-    use_wry_event_handler(move |event, _| match event {
-        WindowEvent {
+    use_wry_event_handler(move |event, _| {
+        if let WindowEvent {
             event: CloseRequested,
             ..
-        } => config.save().unwrap(),
-        _ => {}
+        } = event
+        {
+            config.save().unwrap();
+        }
     });
 
     Ok(config)

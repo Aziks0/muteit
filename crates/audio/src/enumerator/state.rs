@@ -32,13 +32,13 @@ impl From<DEVICE_STATE> for State {
     }
 }
 
-impl Into<DEVICE_STATE> for State {
-    fn into(self) -> DEVICE_STATE {
-        match self {
-            Self::Active => DEVICE_STATE_ACTIVE,
-            Self::Unplugged => DEVICE_STATE_UNPLUGGED,
-            Self::NotPresent => DEVICE_STATE_NOTPRESENT,
-            Self::Disabled => DEVICE_STATE_DISABLED,
+impl From<State> for DEVICE_STATE {
+    fn from(value: State) -> Self {
+        match value {
+            State::Active => DEVICE_STATE_ACTIVE,
+            State::Unplugged => DEVICE_STATE_UNPLUGGED,
+            State::NotPresent => DEVICE_STATE_NOTPRESENT,
+            State::Disabled => DEVICE_STATE_DISABLED,
         }
     }
 }

@@ -26,7 +26,7 @@ const MIC_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic.bin")
 const MIC_OFF_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic-off.bin"));
 const MIC_NONE_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic-none.bin"));
 
-const CHANNEL_FULL_ERROR: &'static str = "tray_icon channel is full";
+const CHANNEL_FULL_ERROR: &str = "tray_icon channel is full";
 
 /// Tray icon state.
 #[derive(Clone, Copy, Debug)]
@@ -48,12 +48,12 @@ impl From<bool> for State {
     }
 }
 
-impl Into<bool> for State {
-    fn into(self) -> bool {
-        match self {
-            Self::Mute => true,
-            Self::Unmute => false,
-            Self::None => unreachable!("Tried to convert `State::None` into bool."),
+impl From<State> for bool {
+    fn from(value: State) -> Self {
+        match value {
+            State::Mute => true,
+            State::Unmute => false,
+            State::None => unreachable!("Tried to convert `State::None` into bool."),
         }
     }
 }
@@ -86,11 +86,15 @@ impl AudioControllerEvents for Messenger {
             return Ok(());
         }
 
-        if let Err(_) = self.tx.try_send(Message {
-            device_id: self.device_id,
-            state: data.muted.into(),
-            is_initial: false,
-        }) {
+        if self
+            .tx
+            .try_send(Message {
+                device_id: self.device_id,
+                state: data.muted.into(),
+                is_initial: false,
+            })
+            .is_err()
+        {
             crate::error::set(anyhow!(CHANNEL_FULL_ERROR));
         };
 
@@ -156,7 +160,7 @@ pub fn use_setup_tray(
     mut enumerator: Signal<DeviceEnumerator<Input>>,
     mut controller: Signal<Option<AudioController>>,
 ) -> Result<()> {
-    let tray = use_hook(|| TrayIcon::try_new().map(|tray| Rc::new(tray)))?;
+    let tray = use_hook(|| TrayIcon::try_new().map(Rc::new))?;
 
     use_muda_event_handler(move |event| {
         if event.id() == SHOW_SETTINGS_EVENT_ID {
@@ -181,12 +185,11 @@ pub fn use_setup_tray(
             button: MouseButton::Left,
             ..
         } = event
-            && let Some(ref device) = *controller.peek()
+            && let Some(ref controller) = *controller.peek()
+            && let Err(err) = toggle_mute(controller)
         {
-            if let Err(err) = toggle_mute(device) {
-                throw_error(err);
-            };
-        }
+            throw_error(err);
+        };
     });
 
     let (tx, rx) = use_hook(|| {

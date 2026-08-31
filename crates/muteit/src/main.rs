@@ -77,10 +77,9 @@ fn App() -> Element {
                 match window().create_shortcut(hotkey.hotkey, move |state| {
                     if state == HotKeyState::Pressed
                         && let Some(ref controller) = *controller.peek()
+                        && let Err(err) = toggle_mute(controller)
                     {
-                        if let Err(err) = toggle_mute(controller) {
-                            throw_error(err);
-                        }
+                        throw_error(err);
                     }
                 }) {
                     Ok(shortcut) => shortcut_handle.set(Some(shortcut)),

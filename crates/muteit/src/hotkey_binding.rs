@@ -116,7 +116,7 @@ impl KeyPresses {
             None => (
                 // It seems like, on Edge, some keys give an empty `code` and in those cases the
                 // `key` is set instead. e.g. `MediaTrackNext`, `AudioVolumeMute`.
-                if key_press.code.len() != 0 {
+                if !key_press.code.is_empty() {
                     Code::from_str(&key_press.code)
                         .expect("`KeyboardEvent.code` to be W3C compliant")
                 } else {
@@ -134,7 +134,7 @@ impl KeyPresses {
         self.keys.clear();
     }
 
-    fn into_elements(&self) -> Element {
+    fn to_elements(&self) -> Element {
         #[component]
         fn Kbd(hidden: bool, children: Element) -> Element {
             rsx! {
@@ -158,7 +158,7 @@ impl KeyPresses {
         }
     }
 
-    fn into_hotkey(&self) -> Result<HotkeyInformation, &'static str> {
+    fn to_hotkey(&self) -> Result<HotkeyInformation, &'static str> {
         const NO_KEY: &str = "A key that is not a modifier is required.";
         const TOO_MANY_KEYS: &str = "Only one key that is not a modifier possible.";
 
@@ -219,9 +219,9 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
                     class: "flex items-center gap-1 grow px-1",
                     class: "rounded-md border-2 border-transparent outline-none",
                     class: if is_binding() { "border-white" },
-                    class: if error() != None { "rounded-bl-none border-red-600!" },
+                    class: if error().is_some() { "rounded-bl-none border-red-600!" },
                     aria_labelledby: "hotkey-label",
-                    {key_presses.read().into_elements()}
+                    {key_presses.read().to_elements()}
                 }
                 button {
                     class: "cursor-pointer rounded-md border-2 border-gray-900 bg-black px-3 py-2",
@@ -263,7 +263,7 @@ pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element 
                             }
                         }
 
-                        match key_presses.read().into_hotkey() {
+                        match key_presses.read().to_hotkey() {
                             Err(message) => error.set(Some(message)),
                             Ok(new_hotkey) => hotkey.set(Some(new_hotkey)),
                         };

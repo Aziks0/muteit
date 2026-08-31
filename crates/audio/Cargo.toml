@@ -26,3 +26,6 @@ features = [
   "Win32_System_Variant",
   "Win32_UI_Shell_PropertiesSystem",
 ]
+
+[lints]
+workspace = true

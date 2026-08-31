@@ -95,7 +95,13 @@ fn convert_image_to_rgba(path: &Path) {
     println!("cargo::rerun-if-changed={}", path.display());
 
     let rgba = image::open(path)
-        .expect(format!("{} to open as an image", path.display()).as_str())
+        .unwrap_or_else(|err| {
+            panic!(
+                "Expected {} to open as an image. Got error: {}",
+                path.display(),
+                err
+            )
+        })
         .into_rgba8()
         .into_raw();
 
@@ -103,7 +109,13 @@ fn convert_image_to_rgba(path: &Path) {
     let filename = path.with_extension("bin");
     let filename = filename.file_name().expect("image to have a filename");
     let path = Path::new(&out_dir).join(filename);
-    fs::write(&path, rgba).expect(format!("{} to be written", path.display()).as_str());
+    fs::write(&path, rgba).unwrap_or_else(|err| {
+        panic!(
+            "Expected {} to be written. Got error: {}",
+            path.display(),
+            err
+        )
+    });
 }
 
 fn convert_images() {
