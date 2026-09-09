@@ -4,6 +4,7 @@
 
 use std::cell::Cell;
 use std::pin::Pin;
+use std::sync::Mutex;
 use std::task::{Context, Poll};
 
 use crate::Channel;
@@ -57,9 +58,18 @@ impl<T> Receiver<T> {
     pub async fn receive(&self) -> T {
         ReceiveAsync(self).await
     }
+
+    /// Make it into a [`Receiver<T>`] which implements [`Sync`].
+    ///
+    /// # Notes
+    ///
+    /// Concurrent operations on [`ReceiverSync<T>`] are **blocking**.
+    pub fn into_sync(self) -> ReceiverSync<T> {
+        self.into()
+    }
 }
 
-pub struct ReceiveAsync<'a, T>(&'a Receiver<T>);
+struct ReceiveAsync<'a, T>(&'a Receiver<T>);
 
 impl<'a, T> Future for ReceiveAsync<'a, T> {
     type Output = T;
@@ -78,5 +88,81 @@ impl<'a, T> Future for ReceiveAsync<'a, T> {
             .try_receive()
             .map(Poll::Ready)
             .unwrap_or(Poll::Pending)
+    }
+}
+
+/// A [`Receiver<T>`] which implements [`Sync`].
+pub struct ReceiverSync<T> {
+    /// The channel.
+    channel: Arc<Channel<T>>,
+    /// Head of the queue.
+    head: Mutex<usize>,
+}
+
+impl<T> ReceiverSync<T> {
+    /// Try to receive a value.
+    ///
+    /// # Notes
+    ///
+    /// Concurrent operations are **blocking**.
+    pub fn try_receive(&self) -> Option<T> {
+        let mut head = self.head.lock().unwrap();
+
+        // Get the index of the slot.
+        let index = *head % self.channel.capacity;
+
+        // SAFETY:
+        // - We got a lock, so no concurrent calls possible with itself.
+        // - `Sender::try_send` only sets slots if the head as moved passed it, and we only move
+        //   head after this line.
+        let value = unsafe { self.channel.queue[index].try_get()? };
+
+        // Advance the head.
+        let new_head = head.wrapping_add(1);
+        // This needs to release writes on the queue for `Sender::try_send`.
+        self.channel.head.store(new_head, Ordering::Release);
+        *head = new_head;
+
+        Some(value)
+    }
+
+    /// Receive a value asynchronously.
+    ///
+    /// # Notes
+    ///
+    /// Concurrent operations are **blocking**.
+    pub async fn receive(&self) -> T {
+        ReceiveSyncAsync(self).await
+    }
+}
+
+struct ReceiveSyncAsync<'a, T>(&'a ReceiverSync<T>);
+
+impl<'a, T> Future for ReceiveSyncAsync<'a, T> {
+    type Output = T;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // Try to get a value if the channel is not empty.
+        if let Some(value) = self.0.try_receive() {
+            return Poll::Ready(value);
+        }
+
+        // Channel is empty, so register the waker.
+        self.0.channel.waker.register(cx.waker());
+
+        // Try one last time to get a value, in case we got raced while registering the waker.
+        self.0
+            .try_receive()
+            .map(Poll::Ready)
+            .unwrap_or(Poll::Pending)
+    }
+}
+
+impl<T> From<Receiver<T>> for ReceiverSync<T> {
+    fn from(value: Receiver<T>) -> Self {
+        Self {
+            head: Mutex::new(value.cache_head.get()),
+            channel: value.channel,
+        }
     }
 }
