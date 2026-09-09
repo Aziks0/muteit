@@ -15,32 +15,27 @@ autostart = { path = "../autostart" }
 key-t = { path = "../key-t" }
 mpsc = { path = "../mpsc/" }
 
-dioxus = { workspace = true }
+iced = { workspace = true }
 windows = { workspace = true, features = [
   "Win32_UI_WindowsAndMessaging",
   "Win32_Security",
   "Win32_System_Threading",
 ] }
-futures-util = { workspace = true }
+global-hotkey = { workspace = true, features = ["serde"] }
 
-dioxus-signals = { version = "0.7.2-rc.0.1", features = ["serialize"] }
-global-hotkey = { version = "0.7.0", features = ["serde"] }
+anyhow = "1.0.104"
 serde = "1.0.219"
 toml = "0.9.5"
+tray-icon = "0.24.2"
 
 [features]
-bundle = []
+default = ["dev"]
+dev = ["iced/debug", "iced/hot"]
 
 [build-dependencies]
 image = { version = "0.25.9", default-features = false, features = [
   "png",
   "ico",
-] }
-lightningcss = "1.0.0-alpha.67"
-oxc = { version = "0.92.0", default-features = false, features = [
-  "codegen",
-  "mangler",
-  "minifier",
 ] }
 toml = { version = "0.9.5", default-features = false, features = [
   "std",

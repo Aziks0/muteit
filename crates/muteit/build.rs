@@ -5,91 +5,9 @@
 use std::path::Path;
 use std::{env, fs};
 
-use lightningcss::printer::PrinterOptions;
-use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
-use lightningcss::targets::{Browsers, Targets};
 use minijinja::{Environment, UndefinedBehavior};
-use oxc::allocator::Allocator;
-use oxc::codegen::{Codegen, CodegenOptions, CommentOptions};
-use oxc::mangler::MangleOptions;
-use oxc::minifier::{CompressOptions, Minifier, MinifierOptions};
-use oxc::parser::Parser;
-use oxc::span::SourceType;
 use toml::Table;
 use winresource::WindowsResource;
-
-fn minify_tailwind(target_version: u32) {
-    println!("cargo::rerun-if-changed=assets/tailwind.css");
-
-    // `include_str!()` adds the file to the dependency list, even if the code does not run (i.e.
-    // even if `bundle` feature is not selected), so we prefer to read the file at runtime to avoid
-    // the build script running every time we make changes to our css.
-    let source =
-        fs::read_to_string("assets/tailwind.css").expect("`assets/tailwind.css` to be read");
-    let source = &source;
-
-    // Edge >= 140
-    let targets = Targets {
-        browsers: Some(Browsers {
-            edge: Some(target_version << 16),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    let mut stylesheet =
-        StyleSheet::parse(source, ParserOptions::default()).expect("tailwind.css to be parsed");
-    stylesheet
-        .minify(MinifyOptions {
-            targets,
-            ..Default::default()
-        })
-        .expect("tailwind.css to be minified");
-    let code = stylesheet
-        .to_css(PrinterOptions {
-            minify: true,
-            targets,
-            ..Default::default()
-        })
-        .expect("minified tailwind to be serialized to a String")
-        .code;
-
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let path = Path::new(&out_dir).join("tailwind.css");
-    fs::write(path, code).expect("tailwind.css to be written");
-}
-
-fn minify_js() {
-    println!("cargo::rerun-if-changed=assets/hotkey_binding.js");
-
-    let source = fs::read_to_string("assets/hotkey_binding.js")
-        .expect("`assets/hotkey_binding.js` to be read");
-    let source = &source;
-
-    let allocator = Allocator::default();
-    let parser_ret = Parser::new(&allocator, source, SourceType::mjs()).parse();
-    let mut program = parser_ret.program;
-    let minifier_ret = Minifier::new(MinifierOptions {
-        mangle: Some(MangleOptions {
-            top_level: true,
-            ..Default::default()
-        }),
-        compress: Some(CompressOptions::smallest()),
-    })
-    .minify(&allocator, &mut program);
-    let code = Codegen::new()
-        .with_options(CodegenOptions {
-            comments: CommentOptions::disabled(),
-            minify: true,
-            ..Default::default()
-        })
-        .with_scoping(minifier_ret.scoping)
-        .build(&program)
-        .code;
-
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let path = Path::new(&out_dir).join("hotkey_binding.js");
-    fs::write(path, code).expect("hotkey_binding.js to be written");
-}
 
 fn convert_image_to_rgba(path: &Path) {
     println!("cargo::rerun-if-changed={}", path.display());
@@ -133,7 +51,7 @@ fn set_resource(mut ctx: Context) {
 
     let mut res = WindowsResource::new();
 
-    if cfg!(feature = "bundle") {
+    if !cfg!(feature = "dev") {
         println!("cargo::rerun-if-changed=assets/bundle/resource.rc.jinja");
 
         ctx.insert(
@@ -199,15 +117,7 @@ fn main() {
     // required. Avoid build script run at all cost.
 
     let ctx = set_envs();
-    let target_version = ctx["WEBVIEW2_MINIMUM_VERSION"]
-        .as_integer()
-        .expect("`WEBVIEW2_MINIMUM_VERSION` to be a u32");
     set_resource(ctx);
 
     convert_images();
-
-    if cfg!(feature = "bundle") {
-        minify_js();
-        minify_tailwind(target_version as _);
-    }
 }

@@ -2,10 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use dioxus::Result;
-use dioxus::desktop::tao::platform::windows::IconExtWindows;
-use dioxus::desktop::tao::window::Icon;
-use dioxus::desktop::wry::dpi::PhysicalSize;
+use iced::Size;
+use iced::window::settings::platform::IconType;
 use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, SM_CXICON, SM_CXSMICON, SYSTEM_METRICS_INDEX,
 };
@@ -13,26 +11,31 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use audio::interface::audio_controller::AudioController;
 
 #[inline]
-pub fn toggle_mute(controller: &AudioController) -> Result<()> {
+pub fn toggle_mute(controller: &AudioController) -> audio::Result<()> {
     let muted = controller.get_mute()?;
     controller.set_mute(!muted)?;
     Ok(())
 }
 
 /// Get icon from the resource's icons using the system's expected dimensions.
-fn get_icon(metric: SYSTEM_METRICS_INDEX) -> Icon {
+fn get_icon(metric: SYSTEM_METRICS_INDEX) -> IconType {
     let size = unsafe { GetSystemMetrics(metric) } as u32;
     assert!(size != 0, "Could not get system metrics.");
-    let size = PhysicalSize::new(size, size);
-    Icon::from_resource(1, Some(size)).unwrap()
+
+    let size = Size::new(size, size);
+
+    IconType::Resource {
+        ordinal: 1,
+        size: Some(size),
+    }
 }
 
 #[inline(always)]
-pub fn get_small_icon() -> Icon {
+pub fn get_small_icon() -> IconType {
     get_icon(SM_CXSMICON)
 }
 
 #[inline(always)]
-pub fn get_big_icon() -> Icon {
+pub fn get_big_icon() -> IconType {
     get_icon(SM_CXICON)
 }

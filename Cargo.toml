@@ -18,6 +18,7 @@ default-members = ["crates/muteit"]
 thiserror = "2.0.16"
 minijinja = { version = "2.12.0", default-features = false }
 futures-util = { version = "0.3.32", default-features = false }
+global-hotkey = { version = "0.7.0", default-features = false }
 
 # Same version needed for both.
 [workspace.dependencies.windows-core]
@@ -25,27 +26,17 @@ version = "0.62.2"
 [workspace.dependencies.windows]
 version = "0.62.2"
 
-[workspace.dependencies.dioxus]
-version = "0.7.2-rc.0.1"
+[workspace.dependencies.iced]
+version = "0.14.0-rc.0.1"
 default-features = false
-features = [
-  "macro",
-  "html",
-  "signals",
-  "hooks",
-  "document",
-  "asset",
-  "launch",
-  "desktop",
-]
+features = ["wgpu", "tiny-skia", "tokio"]
 
 [workspace.lints.clippy]
 # We prefer "module inception" over putting everything in `mod.rs`.
 module_inception = "allow"
 
 [patch.crates-io]
-dioxus = { git = "https://github.com/Aziks0/dioxus.git", tag = "v0.7.2-rc.0.1" }
-dioxus-signals = { git = "https://github.com/Aziks0/dioxus.git", tag = "v0.7.2-rc.0.1" }
+iced = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
 
 [profile.release]
 codegen-units = 1

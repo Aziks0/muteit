@@ -20,11 +20,6 @@ SPDX-FileCopyrightText = "2025 Benjamin DIDIER <contact@aziks.aleeas.com>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
-path = "crates/muteit/assets/tailwind.css"
-SPDX-FileCopyrightText = "Tailwind Labs, Inc."
-SPDX-License-Identifier = "MIT"
-
-[[annotations]]
 path = "crates/muteit/assets/JetBrainsMono-Regular.woff2"
 SPDX-FileCopyrightText = "2020 The JetBrains Mono Project Authors"
 SPDX-License-Identifier = "OFL-1.1"

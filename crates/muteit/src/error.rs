@@ -2,30 +2,31 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! [`throw_error`] from outside `dioxus`'s runtime.
+//! Throw error from outside [`iced`]'s runtime.
 
 use std::ptr;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::task::Poll;
 
-use dioxus::CapturedError;
-use dioxus::core::throw_error;
-use dioxus::prelude::*;
-use futures_util::task::AtomicWaker;
+use iced::Subscription;
+use iced::futures::stream;
+use iced::futures::task::AtomicWaker;
 
+/// The global error tracker.
 static ERROR: Error = Error {
     error: AtomicPtr::new(ptr::null_mut()),
     waker: AtomicWaker::new(),
 };
 
+/// Track the first error that happened outside of [`iced`]'s runtime.
 struct Error {
-    error: AtomicPtr<CapturedError>,
+    error: AtomicPtr<anyhow::Error>,
     waker: AtomicWaker,
 }
 
 impl Error {
     /// Set an error if it hasn't already been done.
-    fn set(&self, error: CapturedError) {
+    fn set(&self, error: anyhow::Error) {
         let error = Box::into_raw(Box::new(error));
         if self
             .error
@@ -39,13 +40,13 @@ impl Error {
         }
     }
 
-    fn get(&self) -> Option<&'static CapturedError> {
+    fn get(&self) -> Option<&'static anyhow::Error> {
         let ptr = self.error.load(Ordering::Acquire);
-        // SAFETY: The `CapturedError` has been leaked indefinitely.
+        // SAFETY: The `Error` has been leaked indefinitely.
         unsafe { ptr.as_ref() }
     }
 
-    async fn get_async(&self) -> &'static CapturedError {
+    async fn get_async(&self) -> &'static anyhow::Error {
         core::future::poll_fn(|cx| {
             if let Some(error) = self.get() {
                 return Poll::Ready(error);
@@ -59,16 +60,13 @@ impl Error {
     }
 }
 
-/// Set an error if it hasn't already been done.
+/// Set the global error if it hasn't already been done.
 #[cold]
-pub fn set(error: impl Into<CapturedError>) {
+pub fn set(error: impl Into<anyhow::Error>) {
     ERROR.set(error.into());
 }
 
-pub fn use_setup_error() {
-    // Listen for incoming error.
-    use_future(|| async {
-        let error = ERROR.get_async().await;
-        throw_error(error.clone());
-    });
+/// Subscribe to global error events.
+pub fn subscription() -> Subscription<&'static anyhow::Error> {
+    Subscription::run(|| stream::once(async { ERROR.get_async().await }))
 }

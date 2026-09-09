@@ -10,7 +10,7 @@ license = "MPL-2.0"
 publish = false
 
 [dependencies]
-dioxus = { workspace = true }
+global-hotkey = { workspace = true }
 
 [dependencies.windows]
 workspace = true

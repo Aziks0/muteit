@@ -34,7 +34,7 @@ await $`mkdir -p ${distDirectory} ${archiveDirectory}`;
 
 console.log('Building binary...');
 const executablePath = path.join(archiveDirectory, `${env.NAME}.exe`);
-await $`cargo build -F bundle --release`;
+await $`cargo build --release --no-default-features`;
 await $`mv target/release/muteit.exe ${executablePath}`;
 
 console.log('Generating licenses...');

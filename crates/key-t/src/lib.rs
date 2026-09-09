@@ -10,7 +10,7 @@
 #[cfg(not(target_os = "windows"))]
 compile_error!("This crate is only available on Windows.");
 
-use dioxus::desktop::Code;
+use global_hotkey::hotkey::Code;
 use windows::Win32::UI::Input::KeyboardAndMouse::*;
 
 include!(concat!(env!("OUT_DIR"), "/code_to_scancode.rs"));
