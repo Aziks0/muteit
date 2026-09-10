@@ -31,7 +31,7 @@ impl<T> Receiver<T> {
         }
     }
 
-    // Try to receive a value.
+    /// Try to receive a value.
     pub fn try_receive(&self) -> Option<T> {
         let head = self.cache_head.get();
 
@@ -53,7 +53,7 @@ impl<T> Receiver<T> {
         Some(value)
     }
 
-    // Receive a value asynchronously.
+    /// Receive a value asynchronously.
     pub async fn receive(&self) -> T {
         ReceiveAsync(self).await
     }
