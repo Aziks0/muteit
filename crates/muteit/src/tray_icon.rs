@@ -5,13 +5,15 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use iced::futures::SinkExt;
 use iced::{Subscription, stream};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
 use mpsc::ReceiverSync;
+
+use crate::maybe_bail;
 
 const SHOW_SETTINGS_EVENT_ID: &str = "muteit-show-settings";
 const EXIT_EVENT_ID: &str = "muteit-exit";
@@ -67,12 +69,16 @@ impl From<State> for bool {
 /// Tray icon action.
 #[derive(Debug)]
 pub enum Action {
+    /// Nothing to do.
+    None,
     /// Toggle the mute state.
     ToggleMute,
     /// Show the settings window.
     ShowSettings,
     /// Exit the application.
     Exit,
+    /// Handle an error.
+    Error(anyhow::Error),
 }
 
 /// Message for the tray icon.
@@ -169,17 +175,23 @@ impl TrayIcon {
             State::Unmute => (&self.mic_icon, "Left click to mute"),
         };
 
-        self.tray.set_icon(Some(icon.clone()))?;
-        self.tray.set_tooltip(Some(tooltip))?;
+        self.tray
+            .set_icon(Some(icon.clone()))
+            .context("Setting tray icon.")?;
+        self.tray
+            .set_tooltip(Some(tooltip))
+            .context("Setting tray tooltip.")?;
 
         Ok(())
     }
 
     /// Update the tray icon.
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Action {
         let Message::NewState(state) = message;
 
-        self.set_icon(state).unwrap();
+        maybe_bail!(self.set_icon(state));
+
+        Action::None
     }
 
     /// Subscribe to tray icon events.

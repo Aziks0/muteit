@@ -15,6 +15,7 @@ mod tray_icon;
 mod utils;
 
 use std::env::args;
+use std::hint;
 use std::sync::LazyLock;
 
 use alone::is_alone;
@@ -25,16 +26,38 @@ use iced::{Element, Size, Subscription, Task, window};
 use crate::mute_listener::MuteListener;
 use crate::tray_icon::{State, TrayIcon};
 
-static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> = LazyLock::new(|| window::Settings {
-    size: Size::new(800., 230.),
-    platform_specific: PlatformSpecific {
-        drag_and_drop: false,
-        icon: Some(utils::get_small_icon()),
-        taskbar_icon: Some(utils::get_big_icon()),
-        ..Default::default()
-    },
-    ..Default::default()
-});
+fn open_window() -> Task<Message> {
+    // Static so we don't call `utils::get_[size]_icon` everytime.
+    static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> =
+        LazyLock::new(|| window::Settings {
+            size: Size::new(800., 230.),
+            platform_specific: PlatformSpecific {
+                drag_and_drop: false,
+                icon: Some(utils::get_small_icon()),
+                taskbar_icon: Some(utils::get_big_icon()),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+    let (_, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
+
+    task.map(Message::WindowOpened)
+}
+
+macro_rules! app_maybe_bail {
+    ($result:expr) => {
+        match $result {
+            Ok(value) => value,
+            Err(err) => return (Self::Error($crate::utils::leak_error(err)), open_window()),
+        }
+    };
+}
+
+#[inline(always)]
+fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
+    Task::done(Message::Error(crate::utils::leak_error(error)))
+}
 
 #[derive(Debug)]
 enum Message {
@@ -45,11 +68,15 @@ enum Message {
     Error(&'static anyhow::Error),
 }
 
-struct App {
+struct InnerApp {
     mute_listener: MuteListener,
     tray: TrayIcon,
     settings_window: Option<window::Id>,
-    error: Option<&'static anyhow::Error>,
+}
+
+enum App {
+    App(InnerApp),
+    Error(&'static anyhow::Error),
 }
 
 impl App {
@@ -57,20 +84,21 @@ impl App {
         let should_open = args().rev().find(|arg| arg == "--hidden").is_none();
 
         let task = if should_open {
-            window::open(DEFAULT_WINDOW_SETTINGS.clone())
-                .1
-                .map(Message::WindowOpened)
+            open_window()
         } else {
             Task::none()
         };
 
+        // let config_dir = AppConfig::get_directory().unwrap();
+
+        let tray = app_maybe_bail!(TrayIcon::try_new());
+
         (
-            Self {
+            Self::App(InnerApp {
                 mute_listener: MuteListener::new(),
-                tray: TrayIcon::try_new().unwrap(),
+                tray,
                 settings_window: None,
-                error: None,
-            },
+            }),
             task,
         )
     }
@@ -80,49 +108,73 @@ impl App {
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
+        let Self::App(this) = self else {
+            hint::cold_path();
+
+            return match message {
+                Message::WindowClosed => iced::exit(),
+                _ => Task::none(),
+            };
+        };
+
         match message {
             Message::WindowOpened(id) => {
-                self.settings_window = Some(id);
+                this.settings_window = Some(id);
 
                 Task::none()
             }
             Message::WindowClosed => {
-                self.settings_window = None;
+                this.settings_window = None;
 
                 Task::none()
             }
             Message::Tray(action) => match action {
+                tray_icon::Action::None => Task::none(),
                 tray_icon::Action::ToggleMute => {
                     todo!()
                 }
                 tray_icon::Action::ShowSettings => {
-                    if let Some(id) = self.settings_window {
+                    if let Some(id) = this.settings_window {
                         return Task::batch([window::minimize(id, false), window::gain_focus(id)]);
                     }
 
-                    let (_, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
-
-                    task.map(Message::WindowOpened)
+                    open_window()
                 }
                 tray_icon::Action::Exit => iced::exit(),
+                tray_icon::Action::Error(err) => into_error_task(err),
             },
             Message::NewState(state) => {
-                self.tray.update(crate::tray_icon::Message::NewState(state));
+                let action = this.tray.update(crate::tray_icon::Message::NewState(state));
 
-                Task::none()
+                match action {
+                    tray_icon::Action::None => Task::none(),
+                    action => Task::done(Message::Tray(action)),
+                }
             }
-            Message::Error(error) => {
-                self.error = Some(error);
+            Message::Error(err) => {
+                let task = if let Some(id) = this.settings_window {
+                    window::request_user_attention(id, Some(window::UserAttention::Critical))
+                } else {
+                    open_window()
+                };
 
-                Task::none()
+                *self = Self::Error(err);
+
+                task
             }
         }
     }
 
     fn subscription(&self) -> Subscription<Message> {
+        let Self::App(this) = self else {
+            hint::cold_path();
+
+            return window::close_events().map(|_| Message::WindowClosed);
+        };
+
         Subscription::batch([
-            self.tray.subscription().map(Message::Tray),
-            self.mute_listener
+            this.tray.subscription().map(Message::Tray),
+            this.mute_listener
                 .subscription()
                 .map(|msg| Message::NewState(msg.into())),
             error::subscription().map(Message::Error),
@@ -131,9 +183,14 @@ impl App {
     }
 
     fn view(&self, _window_id: window::Id) -> Element<'_, Message> {
-        if let Some(error) = self.error.as_ref() {
-            return text!("An error occurred: {:?}", error).into();
-        }
+        let this = match self {
+            Self::App(app) => app,
+            Self::Error(err) => {
+                hint::cold_path();
+
+                return text!("An error occurred: {:?}", err).into();
+            }
+        };
 
         text!("todo").into()
     }
@@ -143,9 +200,6 @@ fn main() {
     if !is_alone!(env!("APP_ID")).expect("CreateMutexW to work") {
         return;
     }
-
-    // TODO: show an error message using `MessageBoxW`?
-    // let config_dir = AppConfig::get_directory().unwrap();
 
     iced::daemon(App::boot, App::update, App::view)
         .title(App::title)

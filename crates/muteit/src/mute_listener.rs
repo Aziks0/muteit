@@ -6,12 +6,14 @@ use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 use iced::Subscription;
 use iced::futures::SinkExt;
 
 use audio::interface::audio_controller::{AudioController, AudioControllerEvents, AudioData};
 use mpsc::{ReceiverSync, Sender};
+
+use crate::maybe_bail;
 
 /// Error message used when the channel is full.
 const CHANNEL_FULL_ERROR: &str = "mute_listener channel is full.";
@@ -71,6 +73,14 @@ impl AudioControllerEvents for Messenger {
     }
 }
 
+/// Mute listener action.
+pub enum Action {
+    /// Nothing to do.
+    None,
+    /// Handle an error.
+    Error(anyhow::Error),
+}
+
 /// Message for [`MuteListener`].
 ///
 /// See [`MuteListener::update`].
@@ -101,34 +111,43 @@ impl MuteListener {
     }
 
     /// Update the mute listener.
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Action {
         // Increment `device_id`.
         let device_id = self.device_id + 1;
         self.device_id = device_id;
 
         let Message::NewController(controller) = message else {
             // NOTE: We still need the `device_id` increment when the device becomes inactive.
-            return;
+            return Action::None;
         };
 
-        let muted = controller.get_mute().unwrap();
+        // TODO: replace by `try` block when stabilized.
+        // https://doc.rust-lang.org/std/ops/trait.Try.html
+        let mut inner = || -> Result<(), anyhow::Error> {
+            let muted = controller.get_mute().context("Getting mute state.")?;
 
-        controller
-            .subscribe_event_notifications(Messenger {
-                device_id,
-                last_muted: AtomicBool::new(muted),
-                tx: self.tx.clone(),
-            })
-            .unwrap();
+            controller
+                .subscribe_event_notifications(Messenger {
+                    device_id,
+                    last_muted: AtomicBool::new(muted),
+                    tx: self.tx.clone(),
+                })
+                .context("Subscribing to device event notifications.")?;
 
-        self.tx
-            .try_send(Event {
-                device_id,
-                muted,
-                initial: true,
-            })
-            .map_err(|_| anyhow!(CHANNEL_FULL_ERROR))
-            .unwrap();
+            self.tx
+                .try_send(Event {
+                    device_id,
+                    muted,
+                    initial: true,
+                })
+                .map_err(|_| anyhow!(CHANNEL_FULL_ERROR))?;
+
+            Ok(())
+        };
+
+        maybe_bail!(inner());
+
+        Action::None
     }
 
     /// Subscribe to mute events.
