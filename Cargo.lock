@@ -549,6 +549,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
+name = "dark"
+version = "0.1.0"
+dependencies = [
+ "windows-bindgen",
+ "windows-core 0.100.0",
+]
+
+[[package]]
 name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1956,6 +1964,7 @@ dependencies = [
  "anyhow",
  "audio",
  "autostart",
+ "dark",
  "global-hotkey",
  "iced",
  "image",

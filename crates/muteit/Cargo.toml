@@ -12,6 +12,7 @@ license = "GPL-3.0-or-later"
 alone = { path = "../alone" }
 audio = { path = "../audio" }
 autostart = { path = "../autostart" }
+dark = { path = "../dark" }
 key-t = { path = "../key-t" }
 mpsc = { path = "../mpsc/" }
 

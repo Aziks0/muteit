@@ -8,6 +8,7 @@ members = [
   "crates/alone",
   "crates/audio",
   "crates/autostart",
+  "crates/dark",
   "crates/key-t",
   "crates/mpsc",
   "crates/muteit",

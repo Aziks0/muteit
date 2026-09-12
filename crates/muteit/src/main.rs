@@ -202,6 +202,10 @@ fn main() {
         return;
     }
 
+    // FIXME: `winit` might do it in a future version.
+    // https://github.com/rust-windowing/winit/issues/4690
+    dark::setup();
+
     iced::daemon(App::boot, App::update, App::view)
         .title(App::title)
         .subscription(App::subscription)
