@@ -16,12 +16,8 @@ key-t = { path = "../key-t" }
 mpsc = { path = "../mpsc/" }
 
 iced = { workspace = true }
-windows = { workspace = true, features = [
-  "Win32_UI_WindowsAndMessaging",
-  "Win32_Security",
-  "Win32_System_Threading",
-] }
 global-hotkey = { workspace = true, features = ["serde"] }
+windows-core = { workspace = true }
 
 anyhow = "1.0.104"
 serde = "1.0.219"
@@ -33,6 +29,9 @@ default = ["dev"]
 dev = ["iced/debug", "iced/hot"]
 
 [build-dependencies]
+minijinja = { workspace = true }
+windows-bindgen = { workspace = true }
+
 image = { version = "0.25.9", default-features = false, features = [
   "png",
   "ico",
@@ -44,5 +43,3 @@ toml = { version = "0.9.5", default-features = false, features = [
   "display",
 ] }
 winresource = { version = "0.1.29", default-features = false }
-
-minijinja = { workspace = true }

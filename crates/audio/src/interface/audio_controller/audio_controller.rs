@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
+use crate::windows::Win32::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
 
 use crate::enumerator::{DeviceInformation, get_interface_by_id};
 use crate::interface::AudioInterface;
@@ -31,7 +31,7 @@ impl AudioController {
 
     /// Set whether the device is muted or not.
     pub fn set_mute(&self, mute: bool) -> Result<()> {
-        unsafe { self.interface.SetMute(mute, std::ptr::null())? }
+        unsafe { self.interface.SetMute(mute, std::ptr::null()).ok()? }
         Ok(())
     }
 
@@ -50,7 +50,7 @@ impl AudioController {
     {
         let proxy = AudioControllerEventProxy::new(subscriber);
         let callback: IAudioEndpointVolumeCallback = proxy.into();
-        unsafe { self.interface.RegisterControlChangeNotify(&callback)? }
+        unsafe { self.interface.RegisterControlChangeNotify(&callback).ok()? }
 
         self.subscribers.push(callback.clone());
 
@@ -59,7 +59,7 @@ impl AudioController {
 
     /// Unsubscribe from event notifications.
     pub fn unsubscribe_event_notifications(&mut self, id: SubscriberId) -> Result<()> {
-        unsafe { self.interface.UnregisterControlChangeNotify(&id.0)? }
+        unsafe { self.interface.UnregisterControlChangeNotify(&id.0).ok()? }
 
         let index = self
             .subscribers

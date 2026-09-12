@@ -11,6 +11,8 @@
 #[cfg(not(target_os = "windows"))]
 compile_error!("This crate is only available on Windows.");
 
+mod windows;
+
 /// Check if there is already an instance of your program running on the user's machine.
 ///
 /// This macro will return `false` if there is a program on the user's machine that has already
@@ -56,21 +58,29 @@ pub mod __private {
     pub use crate::is_alone;
     pub use constcat::concat;
     pub use widestring::{Utf16Str, utf16str};
-    pub use windows::core::PCWSTR;
+    pub use windows_core::PCWSTR;
 
-    use windows::Win32::Foundation::ERROR_ALREADY_EXISTS;
-    use windows::Win32::System::Threading::CreateMutexW;
+    use windows_core::{HRESULT, WIN32_ERROR};
+
+    use crate::windows::Win32::{CreateMutexW, ERROR_ALREADY_EXISTS};
 
     #[inline(always)]
     pub fn is_alone(unique: PCWSTR) -> Result<bool, String> {
         // We don't care about the returned handle. We just care about whether there is an error or not.
         // Windows won't destroy the mutex until we either call `CloseHandle` or the program exits.
-        unsafe { CreateMutexW(None, false, unique).map_err(|err| err.message())? };
+        let failed = unsafe { CreateMutexW(None, false, unique).0.is_null() };
+
+        // Call `GetLastError`.
+        let err = HRESULT::from_thread();
+
+        if failed {
+            return Err(err.message());
+        }
 
         // If the mutex exists already, `CreateMutexW` returns a valid handle and `GetLastError` returns
         // `ERROR_ALREADY_EXISTS`. If it's a new mutex, then there should be no error.
         // https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw#return-value
-        Ok(windows::core::Error::from_thread() != ERROR_ALREADY_EXISTS.into())
+        Ok(err != WIN32_ERROR(ERROR_ALREADY_EXISTS as _).into())
     }
 }
 

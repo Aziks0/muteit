@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use windows::Win32::Media::Audio::{EDataFlow, eAll, eCapture, eRender};
+use crate::windows::Win32::{EDataFlow, eAll, eCapture, eRender};
 
 /// Audio data flow.
 pub trait Flow: Clone + Copy + PartialEq + Eq {

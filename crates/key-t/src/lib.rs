@@ -10,14 +10,19 @@
 #[cfg(not(target_os = "windows"))]
 compile_error!("This crate is only available on Windows.");
 
+mod windows;
+
 use global_hotkey::hotkey::Code;
-use windows::Win32::UI::Input::KeyboardAndMouse::*;
+
+use crate::windows::Win32::*;
+use crate::windows::*;
 
 include!(concat!(env!("OUT_DIR"), "/code_to_scancode.rs"));
 
 /// One-one mapping of Windows Virtual-Keys to [`Code`].
-fn virtual_key_to_code(virtual_key: u16) -> Option<Code> {
-    let virtual_key = VIRTUAL_KEY(virtual_key);
+fn virtual_key_to_code(virtual_key: u32) -> Option<Code> {
+    let virtual_key = virtual_key as _;
+
     let code = match virtual_key {
         VK_A => Code::KeyA,
         VK_B => Code::KeyB,
@@ -181,15 +186,15 @@ impl LogicalKey {
     pub fn from_physical_key(code: &str) -> Option<Self> {
         let scancode = code_to_scancode(code)?;
 
-        let virtual_key = unsafe { MapVirtualKeyExW(scancode as u32, MAPVK_VSC_TO_VK, None) };
+        let virtual_key = unsafe { MapVirtualKeyExW(scancode as u32, MAPVK_VSC_TO_VK as _, None) };
         if virtual_key == 0 {
             return None;
         };
 
-        let code = virtual_key_to_code(virtual_key as u16)?;
+        let code = virtual_key_to_code(virtual_key)?;
 
         // Get the character associated with the virtual key.
-        let key = unsafe { MapVirtualKeyExW(virtual_key, MAPVK_VK_TO_CHAR, None) };
+        let key = unsafe { MapVirtualKeyExW(virtual_key, MAPVK_VK_TO_CHAR as _, None) };
         let key = match key {
             0 => None,
             _ => char::from_u32(key & 0xffff),

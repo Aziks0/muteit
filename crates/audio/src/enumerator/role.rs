@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use windows::Win32::Media::Audio::{ERole, eCommunications, eConsole, eMultimedia};
+use crate::windows::Win32::{ERole, eCommunications, eConsole, eMultimedia};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 /// Device role assigned by the system or the user.

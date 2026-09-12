@@ -4,11 +4,12 @@
 
 use std::ffi::{OsStr, c_void};
 
-use windows::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_SUCCESS};
-use windows::Win32::System::Registry::{
-    HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+use windows_core::{HSTRING, PCWSTR, WIN32_ERROR, w};
+
+use crate::windows::Win32::{
+    ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_SUCCESS, HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ,
+    RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
 };
-use windows::core::{HSTRING, PCWSTR, w};
 
 use crate::{Error, Result};
 
@@ -102,15 +103,16 @@ impl AutoStart {
                 HKEY_CURRENT_USER,
                 SUB_KEY_PATH,
                 &self.app_name,
-                RRF_RT_REG_SZ,
+                RRF_RT_REG_SZ as _,
                 None,
                 None,
                 None,
             )
+            .0
         } {
             ERROR_SUCCESS => Ok(true),
             ERROR_FILE_NOT_FOUND => Ok(false),
-            err => Err(Error::GettingRegistryValue(err.into())),
+            err => Err(Error::GettingRegistryValue(WIN32_ERROR(err as _).into())),
         }
     }
 
@@ -129,11 +131,12 @@ impl AutoStart {
                 HKEY_CURRENT_USER,
                 SUB_KEY_PATH,
                 &self.app_name,
-                RRF_RT_REG_SZ,
+                RRF_RT_REG_SZ as _,
                 None,
                 Some(buffer.as_mut_ptr() as _),
                 Some(&mut buffer_capacity_bytes),
             )
+            .0
         } {
             ERROR_SUCCESS => {
                 // `buffer_capacity_bytes` is now the len of the buffer, still in bytes, including
@@ -168,7 +171,7 @@ impl AutoStart {
             }
             ERROR_MORE_DATA => Ok(false),
             ERROR_FILE_NOT_FOUND => Ok(false),
-            err => Err(Error::GettingRegistryValue(err.into())),
+            err => Err(Error::GettingRegistryValue(WIN32_ERROR(err as _).into())),
         }
     }
 
@@ -215,15 +218,16 @@ impl AutoStart {
                     HKEY_CURRENT_USER,
                     SUB_KEY_PATH,
                     &self.app_name,
-                    REG_SZ.0,
+                    REG_SZ,
                     lpdata,
                     len as _,
                 )
+                .0
             } else {
-                RegDeleteKeyValueW(HKEY_CURRENT_USER, SUB_KEY_PATH, &self.app_name)
+                RegDeleteKeyValueW(HKEY_CURRENT_USER, SUB_KEY_PATH, &self.app_name).0
             } {
                 ERROR_SUCCESS => Ok(()),
-                err => Err(Error::SettingRegistryValue(err.into())),
+                err => Err(Error::SettingRegistryValue(WIN32_ERROR(err as _).into())),
             }
         }
     }

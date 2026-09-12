@@ -11,12 +11,10 @@ publish = false
 
 [dependencies]
 global-hotkey = { workspace = true }
-
-[dependencies.windows]
-workspace = true
-features = ["Win32_UI_Input_KeyboardAndMouse"]
+windows-core = { workspace = true }
 
 [build-dependencies]
 minijinja = { workspace = true }
+windows-bindgen = { workspace = true }
 
 regex = "1.11.3"

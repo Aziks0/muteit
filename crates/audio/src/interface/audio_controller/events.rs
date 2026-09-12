@@ -2,14 +2,13 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use windows::Win32::Foundation::E_INVALIDARG;
-use windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA;
-use windows::Win32::Media::Audio::Endpoints::{
-    IAudioEndpointVolumeCallback, IAudioEndpointVolumeCallback_Impl,
-};
-use windows::core::implement;
+use windows_core::implement;
 
 use crate::WindowsResult;
+use crate::windows::Win32::{
+    AUDIO_VOLUME_NOTIFICATION_DATA, E_INVALIDARG, IAudioEndpointVolumeCallback,
+    IAudioEndpointVolumeCallback_Impl,
+};
 
 /// Device audio data.
 pub struct AudioData {
@@ -52,7 +51,7 @@ impl<Subscriber> IAudioEndpointVolumeCallback_Impl for AudioControllerEventProxy
 where
     Subscriber: AudioControllerEvents + 'static,
 {
-    fn OnNotify(&self, data: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
+    fn OnNotify(&self, data: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows_core::Result<()> {
         if data.is_null() {
             return Err(E_INVALIDARG.into());
         }

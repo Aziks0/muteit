@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-use windows::Win32::Foundation::E_INVALIDARG;
-use windows::Win32::Media::Audio::{IMMNotificationClient, IMMNotificationClient_Impl};
-use windows::core::implement;
+use windows_core::implement;
+
+use crate::windows::Win32::{E_INVALIDARG, IMMNotificationClient, IMMNotificationClient_Impl};
 
 use crate::WindowsResult;
 use crate::enumerator::{FlowVariant, Role, State};
@@ -58,8 +58,8 @@ where
 {
     fn OnDefaultDeviceChanged(
         &self,
-        flow: windows::Win32::Media::Audio::EDataFlow,
-        role: windows::Win32::Media::Audio::ERole,
+        flow: crate::windows::Win32::EDataFlow,
+        role: crate::windows::Win32::ERole,
         device_id: &windows_core::PCWSTR,
     ) -> windows_core::Result<()> {
         // There might be no device available, which means no default device, so this method can
@@ -95,7 +95,7 @@ where
     fn OnDeviceStateChanged(
         &self,
         device_id: &windows_core::PCWSTR,
-        new_state: windows::Win32::Media::Audio::DEVICE_STATE,
+        new_state: crate::windows::DeviceState,
     ) -> windows_core::Result<()> {
         if device_id.is_null() {
             return Err(E_INVALIDARG.into());
@@ -109,7 +109,7 @@ where
     fn OnPropertyValueChanged(
         &self,
         _device_id: &windows_core::PCWSTR,
-        _key: &windows::Win32::Foundation::PROPERTYKEY,
+        _key: &crate::windows::Win32::PROPERTYKEY,
     ) -> windows_core::Result<()> {
         Ok(())
     }

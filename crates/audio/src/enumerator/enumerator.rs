@@ -7,13 +7,13 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
-use windows::Win32::Foundation::{E_INVALIDARG, ERROR_NOT_FOUND};
-use windows::Win32::Media::Audio::{
-    IMMDevice, IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
+use windows_core::{HSTRING, PCWSTR, WIN32_ERROR};
+
+use crate::windows::Win32::{
+    CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, E_INVALIDARG, ERROR_NOT_FOUND, IMMDevice,
+    IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator, PKEY_Device_FriendlyName,
+    PropVariantToBSTR, STGM_READ,
 };
-use windows::Win32::System::Com::{CLSCTX_ALL, CoCreateInstance, CoTaskMemFree, STGM_READ};
-use windows::core::{HSTRING, PCWSTR};
 
 use crate::enumerator::{AudioDeviceEvents, AudioDeviceEventsProxy, Flow, State};
 use crate::interface::AudioInterface;
@@ -91,7 +91,7 @@ impl Display for DeviceInformation {
 
 impl Drop for DeviceInformation {
     fn drop(&mut self) {
-        unsafe { CoTaskMemFree(Some(self.id.0 as *const _)) };
+        unsafe { CoTaskMemFree(self.id.0 as *mut _) };
     }
 }
 
@@ -219,7 +219,7 @@ impl<F: Flow> DeviceEnumerator<F> {
     /// COM has to be initialized for the calling thread before calling this method.
     pub fn try_new_with_empty_list() -> Result<Self> {
         let enumerator: IMMDeviceEnumerator =
-            unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
+            unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL as _)? };
         Ok(Self {
             enumerator: Rc::new(enumerator),
             endpoints: Vec::new(),
@@ -255,10 +255,9 @@ impl<F: Flow> DeviceEnumerator<F> {
                 let device = endpoints.Item(device_number)?;
 
                 // Get a readable name for the device.
-                let property_store = device.OpenPropertyStore(STGM_READ)?;
-                let name = property_store
-                    .GetValue(&PKEY_Device_FriendlyName)?
-                    .to_string();
+                let property_store = device.OpenPropertyStore(STGM_READ as _)?;
+                let name_property = property_store.GetValue(&PKEY_Device_FriendlyName)?;
+                let name = PropVariantToBSTR(&name_property)?.display().to_string();
 
                 let id = device.GetId()?;
                 let id = PCWSTR(id.0);
@@ -303,7 +302,8 @@ impl<F: Flow> DeviceEnumerator<F> {
         let callback: IMMNotificationClient = proxy.into();
         unsafe {
             self.enumerator
-                .RegisterEndpointNotificationCallback(&callback)?
+                .RegisterEndpointNotificationCallback(&callback)
+                .ok()?
         }
 
         self.subscribers.push(callback.clone());
@@ -315,7 +315,8 @@ impl<F: Flow> DeviceEnumerator<F> {
     pub fn unsubscribe_event_notifications(&mut self, id: SubscriberId) -> Result<()> {
         unsafe {
             self.enumerator
-                .UnregisterEndpointNotificationCallback(&id.0)?
+                .UnregisterEndpointNotificationCallback(&id.0)
+                .ok()?
         }
 
         let index = self
@@ -355,7 +356,7 @@ impl<F: Flow> DeviceEnumerator<F> {
         unsafe {
             let device = get_device(&self.enumerator, &HSTRING::from(id.as_ref()))?;
             let state = device.GetState()?.into();
-            let interface: I::Interface = device.Activate(CLSCTX_ALL, None)?;
+            let interface: I::Interface = device.Activate(CLSCTX_ALL as _, None)?;
             Ok((I::new(interface), state))
         }
     }
@@ -393,13 +394,13 @@ impl<F: Flow> Deref for DeviceEnumerator<F> {
 
 fn get_device<P>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<IMMDevice>
 where
-    P: windows::core::Param<PCWSTR>,
+    P: windows_core::Param<PCWSTR>,
 {
     unsafe {
         enumerator.GetDevice(id).map_err(|err| {
             // The value is also used for `PEER_E_NOT_FOUND` so I prefer to only check for this
             // error for the `IMMDeviceEnumerator::GetDevice` method.
-            if err.code() == ERROR_NOT_FOUND.to_hresult() {
+            if err.code() == WIN32_ERROR(ERROR_NOT_FOUND as _).into() {
                 Error::DeviceNotFound
             } else if err.code() == E_INVALIDARG {
                 Error::InvalidDeviceID
@@ -412,12 +413,12 @@ where
 
 pub(crate) fn get_interface_by_id<P, I>(enumerator: &IMMDeviceEnumerator, id: P) -> Result<I>
 where
-    P: windows::core::Param<PCWSTR>,
+    P: windows_core::Param<PCWSTR>,
     I: AudioInterface,
 {
     unsafe {
         let device = get_device(enumerator, id)?;
-        let interface: I::Interface = device.Activate(CLSCTX_ALL, None)?;
+        let interface: I::Interface = device.Activate(CLSCTX_ALL as _, None)?;
         Ok(I::new(interface))
     }
 }

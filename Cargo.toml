@@ -20,11 +20,11 @@ minijinja = { version = "2.12.0", default-features = false }
 futures-util = { version = "0.3.32", default-features = false }
 global-hotkey = { version = "0.7.0", default-features = false }
 
-# Same version needed for both.
+# Same version needed for all the windows crates.
 [workspace.dependencies.windows-core]
-version = "0.62.2"
-[workspace.dependencies.windows]
-version = "0.62.2"
+version = "0.100.0"
+[workspace.dependencies.windows-bindgen]
+version = "0.100.0"
 
 [workspace.dependencies.iced]
 version = "0.14.0-rc.0.1"

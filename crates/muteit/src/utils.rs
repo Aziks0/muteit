@@ -2,11 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use crate::windows::Win32::{GetSystemMetrics, SM_CXICON, SM_CXSMICON};
 use iced::Size;
 use iced::window::settings::platform::IconType;
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, SM_CXICON, SM_CXSMICON, SYSTEM_METRICS_INDEX,
-};
 
 use audio::interface::audio_controller::AudioController;
 
@@ -18,7 +16,7 @@ pub fn toggle_mute(controller: &AudioController) -> audio::Result<()> {
 }
 
 /// Get icon from the resource's icons using the system's expected dimensions.
-fn get_icon(metric: SYSTEM_METRICS_INDEX) -> IconType {
+fn get_icon(metric: i32) -> IconType {
     let size = unsafe { GetSystemMetrics(metric) } as u32;
     assert!(size != 0, "Could not get system metrics.");
 

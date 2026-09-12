@@ -13,6 +13,7 @@ mod error;
 mod mute_listener;
 mod tray_icon;
 mod utils;
+mod windows;
 
 use std::env::args;
 use std::hint;

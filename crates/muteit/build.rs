@@ -7,6 +7,7 @@ use std::{env, fs};
 
 use minijinja::{Environment, UndefinedBehavior};
 use toml::Table;
+use windows_bindgen::Bindgen;
 use winresource::WindowsResource;
 
 fn convert_image_to_rgba(path: &Path) {
@@ -112,9 +113,21 @@ fn set_envs() -> Context {
     envs
 }
 
+fn generate_windows_binding() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let path = Path::new(&out_dir).join("windows.rs");
+
+    Bindgen::new()
+        .output(path)
+        .filters(["GetSystemMetrics", "SM_CXICON", "SM_CXSMICON"])
+        .write();
+}
+
 fn main() {
     // NOTE: hotreloading doesn't work when the build script needs to run, so a full app relaunch is
     // required. Avoid build script run at all cost.
+
+    generate_windows_binding();
 
     let ctx = set_envs();
     set_resource(ctx);

@@ -14,7 +14,10 @@ __test = []
 
 [dependencies]
 thiserror = { workspace = true }
-windows = { workspace = true, features = ["Win32_System_Registry"] }
+windows-core = { workspace = true }
+
+[build-dependencies]
+windows-bindgen = { workspace = true }
 
 [dev-dependencies]
 autostart = { path = ".", features = ["__test"] }

@@ -7,7 +7,7 @@ pub enum Error {
     #[error("getting executable path ({0})")]
     GettingExePath(std::io::Error),
     #[error("getting registry key ({0})")]
-    GettingRegistryValue(windows::core::Error),
+    GettingRegistryValue(windows_core::Error),
     #[error("setting registry key ({0})")]
-    SettingRegistryValue(windows::core::Error),
+    SettingRegistryValue(windows_core::Error),
 }
