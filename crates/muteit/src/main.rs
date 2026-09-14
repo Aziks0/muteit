@@ -11,7 +11,7 @@
 // mod hotkey_binding;
 mod error;
 mod mute_listener;
-mod tray_icon;
+mod tray;
 mod utils;
 mod windows;
 
@@ -25,7 +25,7 @@ use iced::window::settings::PlatformSpecific;
 use iced::{Element, Size, Subscription, Task, window};
 
 use crate::mute_listener::MuteListener;
-use crate::tray_icon::{State, TrayIcon};
+use crate::tray::{State, TrayIcon};
 
 fn open_window() -> Task<Message> {
     // Static so we don't call `utils::get_[size]_icon` everytime.
@@ -64,7 +64,7 @@ fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
 enum Message {
     WindowOpened(window::Id),
     WindowClosed,
-    Tray(crate::tray_icon::Action),
+    Tray(tray::Action),
     NewState(State),
     Error(&'static anyhow::Error),
 }
@@ -130,25 +130,25 @@ impl App {
                 Task::none()
             }
             Message::Tray(action) => match action {
-                tray_icon::Action::None => Task::none(),
-                tray_icon::Action::ToggleMute => {
+                tray::Action::None => Task::none(),
+                tray::Action::ToggleMute => {
                     todo!()
                 }
-                tray_icon::Action::ShowSettings => {
+                tray::Action::ShowSettings => {
                     if let Some(id) = this.settings_window {
                         return Task::batch([window::minimize(id, false), window::gain_focus(id)]);
                     }
 
                     open_window()
                 }
-                tray_icon::Action::Exit => iced::exit(),
-                tray_icon::Action::Error(err) => into_error_task(err),
+                tray::Action::Exit => iced::exit(),
+                tray::Action::Error(err) => into_error_task(err),
             },
             Message::NewState(state) => {
-                let action = this.tray.update(crate::tray_icon::Message::NewState(state));
+                let action = this.tray.update(tray::Message::NewState(state));
 
                 match action {
-                    tray_icon::Action::None => Task::none(),
+                    tray::Action::None => Task::none(),
                     action => Task::done(Message::Tray(action)),
                 }
             }
