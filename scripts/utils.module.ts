@@ -25,6 +25,7 @@ export const thrower = (message: string) => {
  * @see {@link set}
  */
 export class SetCwdWorkspace implements Disposable {
+  // @ts-expect-error: We're using `new` instead of `constructor`.
   #previousCwd: string;
 
   // We have to use an async function, which constructors cannot await. So we
