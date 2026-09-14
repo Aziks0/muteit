@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+// SPDX-FileCopyrightText: 2026 Benjamin DIDIER <contact@aziks.aleeas.com>
 //
 // SPDX-License-Identifier: MPL-2.0
 

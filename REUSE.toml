@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+# SPDX-FileCopyrightText: 2025-2026 Benjamin DIDIER <contact@aziks.aleeas.com>
 # 
 # SPDX-License-Identifier: CC0-1.0
 
@@ -6,17 +6,17 @@ version = 1
 
 [[annotations]]
 path = "Cargo.lock"
-SPDX-FileCopyrightText = "2025 Benjamin DIDIER <contact@aziks.aleeas.com>"
+SPDX-FileCopyrightText = "2025-2026 Benjamin DIDIER <contact@aziks.aleeas.com>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = "biome.json"
-SPDX-FileCopyrightText = "2025 Benjamin DIDIER <contact@aziks.aleeas.com>"
+SPDX-FileCopyrightText = "2025-2026 Benjamin DIDIER <contact@aziks.aleeas.com>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = "tsconfig.json"
-SPDX-FileCopyrightText = "2025 Benjamin DIDIER <contact@aziks.aleeas.com>"
+SPDX-FileCopyrightText = "2026 Benjamin DIDIER <contact@aziks.aleeas.com>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
@@ -42,6 +42,6 @@ path = [
 SPDX-FileCopyrightText = [
   "2013-2023 Cole Bemis as part of Feather",
   "2025 Lucide Contributors",
-  "2025 Benjamin DIDIER <contact@aziks.aleeas.com>",
+  "2025-2026 Benjamin DIDIER <contact@aziks.aleeas.com>",
 ]
 SPDX-License-Identifier = ["MIT AND ISC AND CC-BY-NC-SA-4.0"]
