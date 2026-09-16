@@ -11,6 +11,7 @@
 // mod hotkey_binding;
 mod error;
 mod mute_listener;
+mod settings;
 mod tray;
 mod utils;
 mod windows;
@@ -25,9 +26,10 @@ use iced::window::settings::PlatformSpecific;
 use iced::{Element, Size, Subscription, Task, window};
 
 use crate::mute_listener::MuteListener;
+use crate::settings::Settings;
 use crate::tray::{State, TrayIcon};
 
-fn open_window() -> Task<Message> {
+fn open_window() -> (window::Id, Task<Message>) {
     // Static so we don't call `utils::get_[size]_icon` everytime.
     static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> =
         LazyLock::new(|| window::Settings {
@@ -41,16 +43,16 @@ fn open_window() -> Task<Message> {
             ..Default::default()
         });
 
-    let (_, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
+    let (id, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
 
-    task.map(Message::WindowOpened)
+    (id, task.discard())
 }
 
-macro_rules! app_maybe_bail {
+macro_rules! boot_maybe_bail {
     ($result:expr) => {
         match $result {
             Ok(value) => value,
-            Err(err) => return (Self::Error($crate::utils::leak_error(err)), open_window()),
+            Err(err) => return (Self::Error($crate::utils::leak_error(err)), open_window().1),
         }
     };
 }
@@ -62,17 +64,17 @@ fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
 
 #[derive(Debug)]
 enum Message {
-    WindowOpened(window::Id),
     WindowClosed,
     Tray(tray::Action),
     NewState(State),
+    Settings(settings::Message),
     Error(&'static anyhow::Error),
 }
 
 struct InnerApp {
     mute_listener: MuteListener,
     tray: TrayIcon,
-    settings_window: Option<window::Id>,
+    settings: Option<(window::Id, Settings)>,
 }
 
 enum App {
@@ -85,20 +87,20 @@ impl App {
         let should_open = args().rev().find(|arg| arg == "--hidden").is_none();
 
         let task = if should_open {
-            open_window()
+            Task::done(Message::Tray(tray::Action::ShowSettings))
         } else {
             Task::none()
         };
 
         // let config_dir = AppConfig::get_directory().unwrap();
 
-        let tray = app_maybe_bail!(TrayIcon::try_new());
+        let tray = boot_maybe_bail!(TrayIcon::try_new());
 
         (
             Self::App(InnerApp {
                 mute_listener: MuteListener::new(),
                 tray,
-                settings_window: None,
+                settings: None,
             }),
             task,
         )
@@ -119,13 +121,9 @@ impl App {
         };
 
         match message {
-            Message::WindowOpened(id) => {
-                this.settings_window = Some(id);
-
-                Task::none()
-            }
             Message::WindowClosed => {
-                this.settings_window = None;
+                // Drop the `Settings` so we don't keep the memory only needed for the view.
+                this.settings = None;
 
                 Task::none()
             }
@@ -135,11 +133,15 @@ impl App {
                     todo!()
                 }
                 tray::Action::ShowSettings => {
-                    if let Some(id) = this.settings_window {
+                    if let Some((id, _)) = this.settings {
                         return Task::batch([window::minimize(id, false), window::gain_focus(id)]);
                     }
 
-                    open_window()
+                    let (id, task) = open_window();
+
+                    this.settings = Some((id, Settings::new()));
+
+                    task
                 }
                 tray::Action::Exit => iced::exit(),
                 tray::Action::Error(err) => into_error_task(err),
@@ -152,11 +154,20 @@ impl App {
                     action => Task::done(Message::Tray(action)),
                 }
             }
+            Message::Settings(message) => {
+                let Some((_, settings)) = &mut this.settings else {
+                    return Task::none();
+                };
+
+                let action = settings.update(message);
+
+                Task::none()
+            }
             Message::Error(err) => {
-                let task = if let Some(id) = this.settings_window {
+                let task = if let Some((id, _)) = this.settings {
                     window::request_user_attention(id, Some(window::UserAttention::Critical))
                 } else {
-                    open_window()
+                    open_window().1
                 };
 
                 *self = Self::Error(err);
@@ -193,7 +204,11 @@ impl App {
             }
         };
 
-        text!("todo").into()
+        let Some((_, settings)) = &this.settings else {
+            unreachable!("Call to `view` without `settings`.");
+        };
+
+        settings.view().map(Message::Settings)
     }
 }
 
