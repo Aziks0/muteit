@@ -2,11 +2,16 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::windows::Win32::{GetSystemMetrics, SM_CXICON, SM_CXSMICON};
 use iced::Size;
 use iced::window::settings::platform::IconType;
 
 use audio::interface::audio_controller::AudioController;
+
+pub type DeviceEnumerator<F> = Rc<RefCell<audio::enumerator::DeviceEnumerator<F>>>;
 
 #[inline]
 pub fn toggle_mute(controller: &AudioController) -> audio::Result<()> {

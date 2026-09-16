@@ -7,8 +7,8 @@
 // mod autostart;
 // mod config;
 // mod device;
-// mod device_selector;
 // mod hotkey_binding;
+mod device_selector;
 mod error;
 mod mute_listener;
 mod settings;
@@ -16,18 +16,27 @@ mod tray;
 mod utils;
 mod windows;
 
+use std::cell::RefCell;
 use std::env::args;
 use std::hint;
+use std::rc::Rc;
 use std::sync::LazyLock;
 
-use alone::is_alone;
+use anyhow::Context;
 use iced::widget::text;
 use iced::window::settings::PlatformSpecific;
 use iced::{Element, Size, Subscription, Task, window};
 
+use alone::is_alone;
+use audio::enumerator::{DeviceEnumerator, Input};
+use audio::interface::audio_controller::AudioController;
+
+use crate::device_selector::DeviceInfo;
 use crate::mute_listener::MuteListener;
 use crate::settings::Settings;
 use crate::tray::{State, TrayIcon};
+use crate::utils::toggle_mute;
+use crate::windows::Win32::{COINIT_APARTMENTTHREADED, CoInitializeEx};
 
 fn open_window() -> (window::Id, Task<Message>) {
     // Static so we don't call `utils::get_[size]_icon` everytime.
@@ -57,6 +66,15 @@ macro_rules! boot_maybe_bail {
     };
 }
 
+macro_rules! app_maybe_bail {
+    ($result:expr) => {
+        match $result {
+            Ok(value) => value,
+            Err(err) => return Task::done(Message::Error($crate::utils::leak_error(err))),
+        }
+    };
+}
+
 #[inline(always)]
 fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
     Task::done(Message::Error(crate::utils::leak_error(error)))
@@ -65,6 +83,7 @@ fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
 #[derive(Debug)]
 enum Message {
     WindowClosed,
+    DeviceSelected(Option<DeviceInfo>),
     Tray(tray::Action),
     NewState(State),
     Settings(settings::Message),
@@ -72,11 +91,14 @@ enum Message {
 }
 
 struct InnerApp {
+    enumerator: utils::DeviceEnumerator<Input>,
+    controller: Option<AudioController>,
     mute_listener: MuteListener,
     tray: TrayIcon,
     settings: Option<(window::Id, Settings)>,
 }
 
+#[allow(clippy::large_enum_variant)]
 enum App {
     App(InnerApp),
     Error(&'static anyhow::Error),
@@ -94,10 +116,15 @@ impl App {
 
         // let config_dir = AppConfig::get_directory().unwrap();
 
+        let enumerator = boot_maybe_bail!(
+            DeviceEnumerator::<Input>::try_new().context("creating device enumerator")
+        );
         let tray = boot_maybe_bail!(TrayIcon::try_new());
 
         (
             Self::App(InnerApp {
+                enumerator: Rc::new(RefCell::new(enumerator)),
+                controller: None,
                 mute_listener: MuteListener::new(),
                 tray,
                 settings: None,
@@ -127,10 +154,48 @@ impl App {
 
                 Task::none()
             }
+            Message::DeviceSelected(info) => {
+                let mut task = Task::none();
+
+                let message = match info {
+                    Some(info) => {
+                        let controller = app_maybe_bail!(
+                            this.enumerator
+                                .borrow()
+                                .get_interface(info.id)
+                                .context("Getting new AudioController interface.")
+                        );
+
+                        this.controller = Some(controller);
+
+                        mute_listener::Message::NewController(this.controller.as_mut().unwrap())
+                    }
+                    None => {
+                        this.controller = None;
+
+                        // `MuteListener`'s subscription doesn't give us a message with the new
+                        // state when the device is inactive, so we need to set the state ourselves.
+                        task = Task::done(Message::NewState(State::None));
+
+                        mute_listener::Message::DeviceInactive
+                    }
+                };
+
+                let action = this.mute_listener.update(message);
+
+                match action {
+                    mute_listener::Action::None => task,
+                    mute_listener::Action::Error(err) => into_error_task(err),
+                }
+            }
             Message::Tray(action) => match action {
                 tray::Action::None => Task::none(),
                 tray::Action::ToggleMute => {
-                    todo!()
+                    if let Some(controller) = &this.controller {
+                        app_maybe_bail!(toggle_mute(controller).context("Toggling mute state."))
+                    }
+
+                    Task::none()
                 }
                 tray::Action::ShowSettings => {
                     if let Some((id, _)) = this.settings {
@@ -139,7 +204,7 @@ impl App {
 
                     let (id, task) = open_window();
 
-                    this.settings = Some((id, Settings::new()));
+                    this.settings = Some((id, Settings::new(this.enumerator.clone())));
 
                     task
                 }
@@ -161,7 +226,18 @@ impl App {
 
                 let action = settings.update(message);
 
-                Task::none()
+                match action {
+                    settings::Action::DeviceSelector(action) => match action {
+                        device_selector::Action::NewDevice(info) => {
+                            Task::done(Message::DeviceSelected(Some(info)))
+                        }
+                        device_selector::Action::NoDevice => {
+                            Task::done(Message::DeviceSelected(None))
+                        }
+                        device_selector::Action::None => Task::none(),
+                        device_selector::Action::Error(err) => into_error_task(err),
+                    },
+                }
             }
             Message::Error(err) => {
                 let task = if let Some((id, _)) = this.settings {
@@ -215,6 +291,15 @@ impl App {
 fn main() {
     if !is_alone!(env!("APP_ID")).expect("CreateMutexW to work") {
         return;
+    }
+
+    // We need COM to be initialized in `App::boot`. `winit` does it, with
+    // `COINIT_APARTMENTTHREADED`, but only on window creation, which can only happen _after_ the
+    // `App:boot` call ends.
+    unsafe {
+        CoInitializeEx(None, COINIT_APARTMENTTHREADED as _)
+            .ok()
+            .expect("CoInitializeEx to work");
     }
 
     // FIXME: `winit` might do it in a future version.

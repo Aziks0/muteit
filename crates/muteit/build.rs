@@ -119,7 +119,13 @@ fn generate_windows_binding() {
 
     Bindgen::new()
         .output(path)
-        .filters(["GetSystemMetrics", "SM_CXICON", "SM_CXSMICON"])
+        .filters([
+            "CoInitializeEx",
+            "COINIT_APARTMENTTHREADED",
+            "GetSystemMetrics",
+            "SM_CXICON",
+            "SM_CXSMICON",
+        ])
         .write();
 }
 

@@ -2,102 +2,221 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use dioxus::prelude::*;
+use std::fmt::Display;
 
-use audio::enumerator::{DeviceEnumerator, Flow};
+use anyhow::Context;
+use iced::Element;
+use iced::widget::{button, pick_list, row};
 
-use crate::config::DeviceInformation;
+use audio::enumerator::Flow;
 
-#[component]
-pub fn DeviceSelector<F>(
-    enumerator: WriteSignal<DeviceEnumerator<F>>,
-    on_select: Callback<Option<u32>, Result<()>>,
-    default: Option<DeviceInformation>,
-) -> Element
-where
-    F: Flow + 'static,
-{
-    let mut found_selected = default.is_none();
-    let default = default.unwrap_or_default();
+use crate::maybe_bail;
+use crate::utils::DeviceEnumerator;
 
-    let mut elements = Vec::with_capacity(enumerator.read().len());
+/// Device availability.
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum Availability {
+    /// Device is in the [`DeviceEnumerator`](audio::enumerator::DeviceEnumerator) list.
+    Available,
+    /// Device is not in the [`DeviceEnumerator`](audio::enumerator::DeviceEnumerator) list.
+    Unavailable,
+    /// Not a device.
+    None,
+}
 
-    for (value, information) in enumerator.read().iter().enumerate() {
-        let id = information.get_id();
-        let initial_selected = id == default.id;
-        if initial_selected {
-            found_selected = true;
+/// Information about the device to control.
+#[derive(Debug, Clone, Default)]
+pub struct DeviceInfo {
+    /// Name of the device.
+    pub name: String,
+    /// Id of the device.
+    pub id: String,
+}
+
+/// A device option for [`pick_list`].
+#[derive(Debug, Clone)]
+struct DeviceOption {
+    info: DeviceInfo,
+    availability: Availability,
+}
+
+impl From<DeviceInfo> for DeviceOption {
+    fn from(value: DeviceInfo) -> Self {
+        Self {
+            info: value,
+            availability: Availability::Available,
         }
+    }
+}
 
-        let element = rsx! {
-            option {
-                class: "px-3 py-1.5",
-                key: "{id}",
-                value,
-                initial_selected,
-                title: "{information}",
-                "{information}"
+impl PartialEq for DeviceOption {
+    fn eq(&self, other: &Self) -> bool {
+        // Only compare the ids, as this will only be used by `pick_list` and not by us.
+        self.info.id == other.info.id
+    }
+}
+
+impl Display for DeviceOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.availability {
+            Availability::Available => f.write_str(self.info.name.as_str()),
+            Availability::Unavailable => {
+                f.write_fmt(format_args!("(Unavailable) {}", self.info.name))
             }
+            Availability::None => f.write_str("None"),
+        }
+    }
+}
 
+/// Device selector action.
+///
+/// See [`DeviceSelector::update`].
+pub enum Action {
+    /// Handle the newly selected device.
+    NewDevice(DeviceInfo),
+    /// No device selected.
+    NoDevice,
+    /// Nothing to do.
+    None,
+    /// Handle an error.
+    Error(anyhow::Error),
+}
+
+/// Message for [`DeviceSelector`].
+///
+/// See [`DeviceSelector::update`].
+#[derive(Debug, Clone)]
+pub enum Message {
+    /// A device has been selected from the list.
+    #[allow(
+        private_interfaces,
+        reason = "This message is not meant to be constructed outside this module."
+    )]
+    DeviceSelected(DeviceOption),
+    /// Refresh the list of devices.
+    Refresh,
+}
+
+/// Widget to select an audio device.
+pub struct DeviceSelector<F: Flow> {
+    /// The device enumerator to create the list of options.
+    enumerator: DeviceEnumerator<F>,
+    /// The currently selected option.
+    selected: DeviceOption,
+    /// The list of options.
+    options: Vec<DeviceOption>,
+}
+
+impl<F: Flow> DeviceSelector<F> {
+    /// Create a new widget.
+    pub fn new(enumerator: DeviceEnumerator<F>, selected: Option<DeviceInfo>) -> Self {
+        let mut this = Self {
+            enumerator,
+            selected: selected
+                .map(DeviceOption::from)
+                .unwrap_or_else(|| DeviceOption {
+                    info: Default::default(),
+                    availability: Availability::None,
+                }),
+            options: Vec::new(),
         };
-        elements.push(element);
+
+        this.update(Message::Refresh);
+
+        this
     }
 
-    // We want the selected device to be in the list, even if it is not. We just disable it so the
-    // user cannot select it.
-    if !found_selected {
-        let DeviceInformation { id, name } = default;
-        let element = rsx! {
-            option {
-                class: "px-3 py-1.5",
-                key: "{id}",
-                value: "default",
-                initial_selected: true,
-                disabled: true,
-                title: "(Unavailable) {name}",
-                "(Unavailable) {name}"
-            }
-        };
-        elements.push(element);
-    }
+    /// Update the widget.
+    pub fn update(&mut self, message: Message) -> Action {
+        match message {
+            Message::DeviceSelected(option) => {
+                // Don't send any action if the new selected device is the same as the previous one.
+                if (self.selected.info.id == option.info.id
+                    && self.selected.availability == option.availability)
+                    // And don't select unavailable devices.
+                    || option.availability == Availability::Unavailable
+                {
+                    return Action::None;
+                }
 
-    rsx! {
-        div {
-            label { class: "ml-1 text-sm font-medium", r#for: "device-select", "Input device" }
-            div { class: "flex w-full gap-1",
-                select {
-                    id: "device-select",
-                    class: "min-w-0 grow base-select",
-                    class: "rounded-md border-2 border-gray-900 bg-black px-3 py-2",
-                    class: "hover:border-gray-700",
-                    class: "focus-visible:border-white focus-visible:outline-none",
-                    class: "picker:mt-1 picker:base-select picker:rounded-md picker:border-2",
-                    class: "picker:border-black picker:bg-gray-800 picker:text-white",
-                    onchange: move |event| {
-                        let value = event.value().parse::<u32>().ok();
-                        on_select.call(value)?;
-                        Ok(())
-                    },
-                    button {
-                        class: "flex truncate",
-                        dangerous_inner_html: r#"<selectedcontent
-                                                    class="min-w-0 truncate"
-                                                 ></selectedcontent>"#,
+                self.selected = option;
+
+                match self.selected.availability {
+                    Availability::None => Action::NoDevice,
+                    Availability::Available => Action::NewDevice(self.selected.info.clone()),
+                    Availability::Unavailable => {
+                        unreachable!("We should never select unavailable devices.")
                     }
-                    option { class: "px-3 py-1.5", value: "none", "None" }
-                    {elements.iter()}
-                }
-                button {
-                    class: "cursor-pointer rounded-md border-2 border-gray-900 bg-black px-3 py-2",
-                    class: "hover:border-gray-700",
-                    class: "focus-visible:border-white focus-visible:outline-none",
-                    onclick: move |_| {
-                        enumerator.write().refresh()?;
-                        Ok(())
-                    },
-                    "Refresh"
                 }
             }
+            Message::Refresh => {
+                maybe_bail!(
+                    self.enumerator
+                        .borrow_mut()
+                        .refresh()
+                        .context("Refreshing audio devices list.")
+                );
+
+                // If there is no selected device, the selected one will be "None", so no need to
+                // search for it.
+                let mut found_selected = self.selected.availability == Availability::None;
+
+                self.options.clear();
+                // Reserve enough space for all the devices + the `None` option + the possible
+                // `Unavailable` option.
+                self.options
+                    .reserve_exact(self.enumerator.borrow().len() + 2);
+
+                self.options.push(DeviceOption {
+                    info: DeviceInfo::default(),
+                    availability: Availability::None,
+                });
+
+                for info in self.enumerator.borrow().iter() {
+                    let id = info.get_id();
+
+                    if self.selected.info.id == id {
+                        found_selected = true;
+
+                        // We need to update the availability of our selected option in case it's
+                        // different, otherwise its name won't be changed.
+                        self.selected.availability = Availability::Available;
+                    }
+
+                    self.options.push(DeviceOption {
+                        // NOTE: Don't use `DeviceInfo::into` as we've already paid to get the id.
+                        info: DeviceInfo {
+                            name: info.to_string(),
+                            id,
+                        },
+                        availability: Availability::Available,
+                    });
+                }
+
+                // We want the selected device to be in the list, even if it is not available.
+                if !found_selected {
+                    // We need to update the availability of our selected option in case it's
+                    // different, otherwise its name won't be changed.
+                    self.selected.availability = Availability::Unavailable;
+
+                    self.options.push(self.selected.clone());
+                }
+
+                Action::None
+            }
         }
+    }
+
+    /// View the widget.
+    pub fn view(&self) -> Element<'_, Message> {
+        row![
+            pick_list(
+                self.options.as_slice(),
+                Some(&self.selected),
+                Message::DeviceSelected,
+            ),
+            button("Refresh").on_press(Message::Refresh)
+        ]
+        .into()
     }
 }

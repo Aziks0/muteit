@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: CC0-1.0
 
-#![allow(non_snake_case)]
+#![allow(non_snake_case, clippy::upper_case_acronyms)]
 
 include!(concat!(env!("OUT_DIR"), "/windows.rs"));
 
