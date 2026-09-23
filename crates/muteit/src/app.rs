@@ -13,6 +13,7 @@ use audio::interface::audio_controller::AudioController;
 use hotkey::HotKeyEvent;
 
 use crate::config::AppConfig;
+use crate::device::{self, DeviceListener};
 use crate::device_selector;
 use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
@@ -24,6 +25,7 @@ use crate::utils;
 pub enum Message {
     WindowClosed,
     HotKeyEvent(HotKeyEvent),
+    NewDeviceState(device::Event),
     Tray(tray::Action),
     NewState(tray::State),
     Settings(settings::Message),
@@ -33,6 +35,7 @@ pub struct App {
     config: AppConfig,
     enumerator: utils::DeviceEnumerator<Input>,
     controller: Option<AudioController>,
+    device_listener: DeviceListener,
     mute_listener: MuteListener,
     hotkey_manager: HotKeyManager,
     tray: TrayIcon,
@@ -49,8 +52,11 @@ impl App {
             hotkey_manager.update(hotkey_manager::Message::RegisterHotKey(info.hotkey))?;
         }
 
-        let enumerator =
+        let mut enumerator =
             DeviceEnumerator::<Input>::try_new().context("creating device enumerator")?;
+
+        let device_listener = DeviceListener::try_new(&mut enumerator)?;
+
         let mut mute_listener = MuteListener::new();
         let mut tray = TrayIcon::try_new()?;
 
@@ -75,6 +81,7 @@ impl App {
                 config,
                 enumerator: Rc::new(RefCell::new(enumerator)),
                 controller,
+                device_listener,
                 mute_listener,
                 hotkey_manager,
                 tray,
@@ -141,6 +148,31 @@ impl App {
 
                 Task::none()
             }
+            Message::NewDeviceState(event) => {
+                let device::Event { device_id, state } = event;
+
+                // We need `&mut self` to call `update_new_controller`, which prevents borrowing
+                // `self.config.device.id` at the same time. To satisfy the borrow checker, we
+                // temporarily take ownership of `self.config.device` and restore it afterward. This
+                // is very hacky, but it avoids cloning the string.
+                //
+                // Note that the `update_*_controller` methods do not depend on
+                // `self.config.device`, so this is not an issue.
+                let info = self.config.device.take();
+
+                if let Some(info) = &info
+                    && info.id == device_id
+                {
+                    match state {
+                        device::State::Available => self.update_new_controller(&info.id)?,
+                        device::State::Unavailable => self.update_no_controller()?,
+                    };
+                }
+
+                self.config.device = info;
+
+                Task::none()
+            }
             Message::Tray(action) => match action {
                 tray::Action::ToggleMute => {
                     utils::toggle_mute(&self.controller)?;
@@ -202,6 +234,9 @@ impl App {
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             self.hotkey_manager.subscription().map(Message::HotKeyEvent),
+            self.device_listener
+                .subscription()
+                .map(Message::NewDeviceState),
             self.tray.subscription().map(Message::Tray),
             self.mute_listener
                 .subscription()
