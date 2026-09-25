@@ -6,12 +6,12 @@
 
 // mod autostart;
 // mod device;
-// mod hotkey_binding;
 mod app;
 mod config;
 mod device_listener;
 mod device_selector;
 mod error;
+mod hotkey_binding;
 mod hotkey_manager;
 mod mute_listener;
 mod settings;

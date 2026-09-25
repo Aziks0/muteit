@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::RefCell;
+use std::debug_assert_matches;
 use std::rc::Rc;
 
 use anyhow::{Context, Result};
@@ -15,6 +16,7 @@ use hotkey::HotKeyEvent;
 use crate::config::AppConfig;
 use crate::device_listener::{self, DeviceListener};
 use crate::device_selector;
+use crate::hotkey_binding;
 use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
 use crate::settings::{self, Settings};
@@ -193,7 +195,11 @@ impl App {
 
                     self.settings = Some((
                         id,
-                        Settings::try_new(self.enumerator.clone(), self.config.device.clone())?,
+                        Settings::try_new(
+                            self.enumerator.clone(),
+                            self.config.device.clone(),
+                            self.config.hotkey.clone(),
+                        )?,
                     ));
 
                     task
@@ -228,12 +234,42 @@ impl App {
                         }
                         device_selector::Action::None => Task::none(),
                     },
+                    settings::Action::HotKeyBinding(action) => match action {
+                        hotkey_binding::Action::RegisterHotkey(info) => {
+                            debug_assert_matches!(self.config.hotkey, None);
+
+                            self.hotkey_manager
+                                .update(hotkey_manager::Message::RegisterHotKey(info.hotkey))?;
+
+                            self.config.hotkey = Some(info);
+
+                            Task::none()
+                        }
+                        hotkey_binding::Action::UnregisterHotkey => {
+                            if let Some(info) = &self.config.hotkey {
+                                self.hotkey_manager.update(
+                                    hotkey_manager::Message::UnregisterHotKey(info.hotkey),
+                                )?;
+
+                                self.config.hotkey = None;
+                            }
+
+                            Task::none()
+                        }
+                        hotkey_binding::Action::None => Task::none(),
+                    },
                 }
             }
         })
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
+        let settings = if let Some((_, settings)) = &self.settings {
+            settings.subscription().map(Message::Settings)
+        } else {
+            Subscription::none()
+        };
+
         Subscription::batch([
             self.hotkey_manager.subscription().map(Message::HotKeyEvent),
             self.device_listener
@@ -244,6 +280,7 @@ impl App {
                 .subscription()
                 .map(|msg| Message::NewState(msg.into())),
             window::close_events().map(|_| Message::WindowClosed),
+            settings,
         ])
     }
 

@@ -2,282 +2,351 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::str::FromStr;
+use std::debug_assert_matches;
 
-use dioxus::core::use_hook_with_cleanup;
-use dioxus::desktop::wry::http::Response;
-use dioxus::desktop::{Code, HotKey, window};
-use dioxus::prelude::*;
-use serde::Deserialize;
+use iced::keyboard::key::{Code, NativeCode, Physical as IcedPhysicalKey};
+use iced::keyboard::{Key, Modifiers as IcedModifiers};
+use iced::widget::{button, column, row, space, text};
+use iced::{Element, Subscription, keyboard};
+use smol_str::{SmolStr, StrExt, format_smolstr};
 
-use key_t::LogicalKey;
+use hotkey::{HotKey, Modifiers};
 
-use crate::config::HotkeyInformation;
+use crate::config::HotkeyInfo;
+use crate::utils;
 
-#[cfg(not(feature = "bundle"))]
-const SCRIPT: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/hotkey_binding.js"
-));
-#[cfg(feature = "bundle")]
-const SCRIPT: &str = include_str!(concat!(env!("OUT_DIR"), "/hotkey_binding.js"));
+/// Error when trying to get a bind for a hotkey.
+///
+/// Use [`Self::as_str`] to get the description of the error.
+#[derive(Clone, Copy, Debug)]
+enum HotKeyBindingError {
+    UnidentifiedKey,
+    NoKey,
+    TooManyKeys,
+}
 
-const FONT_NAME: &str = "JetBrainsMono-Regular.woff2";
-const FONT: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/JetBrainsMono-Regular.woff2",
-));
+impl HotKeyBindingError {
+    /// Get a description of the error.
+    const fn as_str(&self) -> &'static str {
+        match self {
+            HotKeyBindingError::UnidentifiedKey => "The pressed key couldn't be identified.",
+            HotKeyBindingError::NoKey => "A key that is not a modifier is required.",
+            HotKeyBindingError::TooManyKeys => "Only one key that is not a modifier is possible.",
+        }
+    }
+}
 
-/// The [keyboard event](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent) given to us
-/// by our JS script.
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+/// A physical key.
+enum PhysicalKey {
+    /// A W3C [`KeyboardEvent.code`].
+    ///
+    /// [`KeyboardEvent.code`]: https://w3c.github.io/uievents-code/#code-value-tables
+    Code(Code),
+    /// A Windows scancode.
+    Scancode(u16),
+}
+
+impl TryFrom<IcedPhysicalKey> for PhysicalKey {
+    type Error = HotKeyBindingError;
+
+    fn try_from(physical_key: IcedPhysicalKey) -> Result<Self, Self::Error> {
+        Ok(match physical_key {
+            IcedPhysicalKey::Code(code) => Self::Code(code),
+            IcedPhysicalKey::Unidentified(NativeCode::Windows(scancode)) => {
+                Self::Scancode(scancode)
+            }
+            _ => Err(HotKeyBindingError::UnidentifiedKey)?,
+        })
+    }
+}
+
+/// A single key press.
 struct KeyPress {
-    ctrl: bool,
-    shift: bool,
-    alt: bool,
-    meta: bool,
-    code: String,
-    key: String,
+    /// The physical key.
+    physical_key: PhysicalKey,
+    /// The key as a string (i.e. what's written on the keycap).
+    text: SmolStr,
 }
 
-/// Message received from our JS script.
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-enum Message {
-    /// A key press.
-    KeyPress(KeyPress),
-    /// No more messages.
-    Finished,
-}
+impl KeyPress {
+    fn try_new(key: Key, physical_key: IcedPhysicalKey) -> Result<Self, HotKeyBindingError> {
+        const UNIDENTIFIED_TEXT: SmolStr = SmolStr::new_inline("???");
 
-/// A single key.
-struct Key {
-    /// The display character(s).
-    key: String,
-    /// The key code.
-    code: Code,
+        let physical_key = physical_key.try_into()?;
+
+        let text = match key {
+            Key::Character(text) => text.to_ascii_uppercase_smolstr(),
+            Key::Named(name) => SmolStr::new_inline(utils::named_key_as_str(name)),
+            Key::Unidentified => match physical_key {
+                PhysicalKey::Scancode(scancode) => format_smolstr!("{:#06x}", scancode),
+                // This case should never happen, as `Key::Named` would be used, but just in case.
+                PhysicalKey::Code(_) => UNIDENTIFIED_TEXT,
+            },
+        };
+
+        Ok(Self { physical_key, text })
+    }
 }
 
 /// A series of key presses.
 struct KeyPresses {
+    /// The keys that were pressed, which are not modifiers.
+    keys: Vec<KeyPress>,
+    /// The modifiers that were pressed.
     modifiers: Modifiers,
-    keys: Vec<Key>,
 }
 
 impl KeyPresses {
     fn new() -> Self {
         Self {
-            modifiers: Modifiers::empty(),
             keys: Vec::with_capacity(2),
+            modifiers: Modifiers::NONE,
         }
     }
 
-    fn push(&mut self, key_press: KeyPress) {
-        let mut modifiers = Modifiers::empty();
-        if key_press.ctrl {
-            modifiers |= Modifiers::CONTROL;
-        }
-        if key_press.shift {
-            modifiers |= Modifiers::SHIFT;
-        }
-        if key_press.alt {
-            modifiers |= Modifiers::ALT;
-        }
-        if key_press.meta {
-            modifiers |= Modifiers::SUPER;
-        }
-
-        if !self.modifiers.contains(modifiers) {
-            self.modifiers = modifiers;
-            // We got a modifier, so no reason to check the key, just stop there.
-            return;
-        }
-
-        // The JS `KeyboardEvent.code` maps to a physical key but Windows expect a logical key when
-        // binding `HotKey`s (e.g. `A` maps to `KeyQ` on AZERTY, but Windows still expect `VK_A`).
-        let (code, key) = match LogicalKey::from_physical_key(&key_press.code) {
-            Some(logical_key) => (
-                logical_key.code,
-                logical_key
-                    .key
-                    .map(|c| match c {
-                        '\t' => String::from("Tab"),
-                        '\n' => String::from("Enter"),
-                        '\r' => String::from("Enter"),
-                        '\x08' => String::from("Backspace"),
-                        '\x1B' => String::from("Escape"),
-                        '\x7F' => String::from("Delete"),
-                        ' ' => String::from("Space"),
-                        _ => c.to_string(),
-                    })
-                    .unwrap_or(key_press.key),
-            ),
-            None => (
-                // It seems like, on Edge, some keys give an empty `code` and in those cases the
-                // `key` is set instead. e.g. `MediaTrackNext`, `AudioVolumeMute`.
-                if !key_press.code.is_empty() {
-                    Code::from_str(&key_press.code)
-                        .expect("`KeyboardEvent.code` to be W3C compliant")
-                } else {
-                    Code::from_str(&key_press.key).expect("")
-                },
-                key_press.key,
-            ),
-        };
-
-        self.keys.push(Key { key, code });
-    }
-
+    /// Clear the key presses.
     fn clear(&mut self) {
-        self.modifiers = Modifiers::empty();
         self.keys.clear();
+        self.modifiers = Modifiers::NONE;
     }
 
-    fn to_elements(&self) -> Element {
-        #[component]
-        fn Kbd(hidden: bool, children: Element) -> Element {
-            rsx! {
-                kbd {
-                    class: "cursor-default bg-black px-2.5 py-1.5 text-sm",
-                    class: "rounded-md border border-b-3 border-gray-600",
-                    class: if hidden { "hidden" },
-                    {children}
-                }
-            }
-        }
-
-        rsx! {
-            Kbd { hidden: !self.modifiers.contains(Modifiers::SUPER), "Win" }
-            Kbd { hidden: !self.modifiers.contains(Modifiers::CONTROL), "Ctrl" }
-            Kbd { hidden: !self.modifiers.contains(Modifiers::SHIFT), "Shift" }
-            Kbd { hidden: !self.modifiers.contains(Modifiers::ALT), "Alt" }
-            for key in &self.keys {
-                Kbd { hidden: false, "{key.key}" }
-            }
-        }
+    /// Whether there are keypresses or not.
+    const fn is_empty(&self) -> bool {
+        self.keys.is_empty() && self.modifiers.is_empty()
     }
 
-    fn to_hotkey(&self) -> Result<HotkeyInformation, &'static str> {
-        const NO_KEY: &str = "A key that is not a modifier is required.";
-        const TOO_MANY_KEYS: &str = "Only one key that is not a modifier possible.";
-
-        match self.keys.len() {
-            0 => Err(NO_KEY),
-            1 => Ok(HotkeyInformation {
-                hotkey: HotKey::new(Some(self.modifiers), self.keys[0].code),
-                key: self.keys[0].key.clone(),
-            }),
-            _ => Err(TOO_MANY_KEYS),
+    /// Get the key presses as an element.
+    fn as_element(&self) -> Option<Element<'_, Message>> {
+        if self.is_empty() {
+            return None;
         }
+
+        let mut elements = Vec::with_capacity(12);
+
+        for (name, _) in self.modifiers.iter_names() {
+            elements.push(text(name).into());
+            elements.push(space().width(4).into());
+        }
+
+        for key in &self.keys {
+            elements.push(text(key.text.as_str()).into());
+            elements.push(space().width(4).into());
+        }
+
+        // Remove the last `space`.
+        elements.pop();
+
+        Some(row(elements).into())
     }
 }
 
-impl From<&HotkeyInformation> for KeyPresses {
-    fn from(value: &HotkeyInformation) -> Self {
-        let mut ret = Self {
-            modifiers: value.hotkey.mods,
-            keys: Vec::with_capacity(2),
-        };
-        ret.keys.push(Key {
-            key: value.key.clone(),
-            code: value.hotkey.key,
+impl From<HotkeyInfo> for KeyPresses {
+    fn from(info: HotkeyInfo) -> Self {
+        let mut this = Self::new();
+
+        this.keys.push(KeyPress {
+            // Use a dummy `PhysicalKey` because it doesn't matter, we won't be using it.
+            physical_key: PhysicalKey::Scancode(0),
+            text: info.key,
         });
-        ret
+
+        this.modifiers = info.hotkey.modifiers();
+
+        this
     }
 }
 
-#[component]
-pub fn HotkeyBinding(hotkey: WriteSignal<Option<HotkeyInformation>>) -> Element {
-    use_hook_with_cleanup(
-        || {
-            window().register_asset_handler(String::from(FONT_NAME), |_asset, responder| {
-                responder.respond(
-                    Response::builder()
-                        .header("Content-Type", "application/font-woff")
-                        .header("Access-Control-Allow-Origin", "*")
-                        .body(FONT)
-                        .unwrap(),
-                )
-            })
-        },
-        |_| _ = window().remove_asset_handler(FONT_NAME),
-    );
+/// Hotkey binding action.
+pub enum Action {
+    /// Register the new hotkey.
+    RegisterHotkey(HotkeyInfo),
+    /// Unregister the current hotkey.
+    UnregisterHotkey,
+    /// Nothing to do.
+    None,
+}
 
-    let mut is_binding = use_signal(|| false);
-    let mut key_presses = use_signal(|| match *hotkey.peek() {
-        Some(ref hotkey) => KeyPresses::from(hotkey),
-        None => KeyPresses::new(),
-    });
-    let mut error = use_signal::<Option<&'static str>>(|| None);
+/// Message for [`HotkeyBinding`].
+///
+/// See [`HotkeyBinding::update`].
+#[derive(Debug, Clone)]
+pub enum Message {
+    /// Start the binding process.
+    StartBinding,
+    /// Stop the binding process.
+    StopBinding,
+    /// A key was received.
+    KeyReceived {
+        /// The key, as expressed by `iced`.
+        key: Key,
+        /// The physical key, as expressed by `iced`.
+        physical_key: IcedPhysicalKey,
+        /// The modifiers applied while the key was pressed, as expressed by `iced`.
+        modifiers: IcedModifiers,
+    },
+    /// Remove the current bind.
+    Unbind,
+}
 
-    rsx! {
-        div {
-            label { class: "ml-1 text-sm font-medium", id: "hotkey-label", "Hotkey" }
-            div { class: "flex w-full gap-1",
-                div {
-                    class: "flex items-center gap-1 grow px-1",
-                    class: "rounded-md border-2 border-transparent outline-none",
-                    class: if is_binding() { "border-white" },
-                    class: if error().is_some() { "rounded-bl-none border-red-600!" },
-                    aria_labelledby: "hotkey-label",
-                    {key_presses.read().to_elements()}
-                }
-                button {
-                    class: "cursor-pointer rounded-md border-2 border-gray-900 bg-black px-3 py-2",
-                    class: "hover:border-gray-700",
-                    class: "focus-visible:border-white focus-visible:outline-none",
-                    onclick: move |_| {
-                        key_presses.write().clear();
-                        error.set(None);
-                        hotkey.set(None);
-                    },
-                    "Unbind"
-                }
-                button {
-                    class: "cursor-pointer rounded-md border-2 border-gray-900 bg-black px-3 py-2",
-                    class: "hover:border-gray-700",
-                    class: "focus-visible:border-white focus-visible:outline-none",
-                    id: "bind-button",
-                    onclick: move |_| async move {
-                        if is_binding() {
-                            return;
-                        }
+/// Component to show and bind a hotkey.
+pub struct HotkeyBinding {
+    key_presses: KeyPresses,
+    is_binding: bool,
+    error: Option<HotKeyBindingError>,
+}
 
-                        is_binding.set(true);
+impl HotkeyBinding {
+    pub fn new(info: Option<HotkeyInfo>) -> Self {
+        Self {
+            key_presses: info.map_or_else(KeyPresses::new, KeyPresses::from),
+            is_binding: false,
+            error: None,
+        }
+    }
 
-                        hotkey.set(None);
-                        key_presses.write().clear();
-                        error.set(None);
+    /// Update the component.
+    pub fn update(&mut self, message: Message) -> Action {
+        match message {
+            Message::StartBinding => {
+                self.is_binding = true;
+                self.error = None;
+                self.key_presses.clear();
 
-                        let mut eval = document::eval(SCRIPT);
-
-                        loop {
-                            let message: Message = eval
-                                .recv()
-                                .await
-                                .expect("Message to be deserialized");
-                            match message {
-                                Message::KeyPress(key_press) => key_presses.write().push(key_press),
-                                Message::Finished => break,
-                            }
-                        }
-
-                        match key_presses.read().to_hotkey() {
-                            Err(message) => error.set(Some(message)),
-                            Ok(new_hotkey) => hotkey.set(Some(new_hotkey)),
-                        };
-
-                        is_binding.set(false);
-                    },
-                    "Bind"
-                }
+                Action::UnregisterHotkey
             }
-            if let Some(message) = error() {
-                div { class: "absolute w-fit rounded-b-md bg-red-600 px-1",
-                    p { class: "-mt-0.5 text-sm font-medium", role: "alert", {message} }
+            Message::StopBinding => {
+                // Possible race between the subscription tracking/canceling and keyboard events?
+                // Just check to be sure.
+                if !self.is_binding {
+                    debug_assert!(self.is_binding);
+                    return Action::None;
                 }
+
+                self.is_binding = false;
+
+                self.error = match self.key_presses.keys.len() {
+                    0 => Some(HotKeyBindingError::NoKey),
+                    1 => {
+                        debug_assert_matches!(self.error, None);
+                        // Keep `self.error` in case it is already `Some`. Shouldn't happen as
+                        // `self.is_binding` would be `false` and so we wouldn't be here, but it
+                        // doesn't cost anything compared to using `None` directly.
+                        self.error
+                    }
+                    _ => Some(HotKeyBindingError::TooManyKeys),
+                };
+
+                if self.error.is_some() {
+                    return Action::None;
+                };
+
+                let hotkey_info = {
+                    let virtual_key = match self.key_presses.keys[0].physical_key {
+                        PhysicalKey::Code(code) => key_t::physical_key_to_virtual_key(code),
+                        PhysicalKey::Scancode(scancode) => key_t::scancode_to_virtual_key(scancode),
+                    };
+
+                    let Some(virtual_key) = virtual_key else {
+                        self.error = Some(HotKeyBindingError::UnidentifiedKey);
+
+                        return Action::None;
+                    };
+
+                    HotkeyInfo {
+                        hotkey: HotKey::new(virtual_key, self.key_presses.modifiers),
+                        key: self.key_presses.keys[0].text.clone(),
+                    }
+                };
+
+                Action::RegisterHotkey(hotkey_info)
+            }
+            Message::KeyReceived {
+                key,
+                physical_key,
+                modifiers,
+            } => {
+                // Possible race between the subscription tracking/canceling and keyboard events?
+                // Just check to be sure.
+                if !self.is_binding {
+                    debug_assert!(self.is_binding);
+                    return Action::None;
+                }
+
+                let modifiers = utils::translate_modifiers(modifiers);
+
+                if self.key_presses.modifiers != modifiers {
+                    self.key_presses.modifiers = modifiers;
+
+                    // We got a modifier, so no reason to check the key, just stop there.
+                    return Action::None;
+                }
+
+                match KeyPress::try_new(key, physical_key) {
+                    Ok(key_press) => self.key_presses.keys.push(key_press),
+                    Err(err) => {
+                        self.is_binding = false;
+                        self.error = Some(err)
+                    }
+                }
+
+                Action::None
+            }
+            Message::Unbind => {
+                self.is_binding = false;
+                self.error = None;
+                self.key_presses.clear();
+
+                Action::UnregisterHotkey
             }
         }
+    }
+
+    /// Subscribe to hotkey binding events.
+    pub fn subscription(&self) -> Subscription<Message> {
+        if !self.is_binding {
+            return Subscription::none();
+        }
+
+        keyboard::listen().filter_map(|event| match event {
+            keyboard::Event::KeyPressed {
+                repeat: false,
+                physical_key,
+                key,
+                modifiers,
+                ..
+            } => Some(Message::KeyReceived {
+                key,
+                physical_key,
+                modifiers,
+            }),
+            keyboard::Event::KeyReleased { .. } => Some(Message::StopBinding),
+            _ => None,
+        })
+    }
+
+    /// View the component.
+    pub fn view(&self) -> Element<'_, Message> {
+        let content = self.key_presses.as_element().unwrap_or_else(|| {
+            let content = if self.is_binding {
+                "Press a key..."
+            } else {
+                "Click to start binding"
+            };
+
+            text(content).into()
+        });
+
+        let err: Element<_> = self
+            .error
+            .map_or_else(|| space().into(), |err| text(err.as_str()).into());
+
+        column![
+            row![
+                button(content).on_press(Message::StartBinding),
+                button("Unbind").on_press(Message::Unbind)
+            ],
+            err
+        ]
+        .into()
     }
 }

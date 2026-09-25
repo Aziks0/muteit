@@ -1,15 +1,17 @@
-// SPDX-FileCopyrightText: 2025 Benjamin DIDIER <contact@aziks.aleeas.com>
+// SPDX-FileCopyrightText: 2025-2026 Benjamin DIDIER <contact@aziks.aleeas.com>
 //
 // SPDX-License-Identifier: MPL-2.0
 
-/// Translate a W3C [`KeyboardEvent.code`] to a Windows [`scancode`].
+use iced::keyboard::key::Code;
+
+/// Translate an `iced` [`Code`] (aka a W3C [`KeyboardEvent.code`]) to a Windows [`scancode`].
 ///
 /// [`KeyboardEvent.code`]: https://w3c.github.io/uievents-code/#code-value-tables
 /// [`scancode`]: https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes
-fn code_to_scancode(code: &str) -> Option<u16> {
+pub const fn code_to_scancode(code: Code) -> Option<u16> {
     let scancode = match code {
     {%- for code, scancode in codes %}
-        {{ code }} => {{ scancode }},
+        Code::{{ code }} => {{ scancode }},
     {%- endfor %}
         _ => return None,
     };
