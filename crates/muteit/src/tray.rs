@@ -6,8 +6,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
-use iced::futures::SinkExt;
-use iced::{Subscription, stream};
+use iced::Subscription;
+use iced::futures::stream;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
@@ -197,14 +197,14 @@ impl TrayIcon {
     /// Subscribe to tray icon events.
     pub fn subscription(&self) -> Subscription<Action> {
         let rx = self.rx.clone();
+
         Subscription::run_with(rx, |rx| {
             let rx = rx.clone();
-            stream::channel(1, async move |mut sender| {
-                loop {
-                    let event = rx.0.receive().await;
-                    // Channel cannot be disconnected, no error can happen.
-                    let _ = sender.send(event).await;
-                }
+
+            stream::unfold(rx, async move |rx| {
+                let event = rx.0.receive().await;
+
+                Some((event, rx))
             })
         })
     }

@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Context, anyhow};
 use iced::Subscription;
-use iced::futures::SinkExt;
+use iced::futures::stream;
 
 use audio::interface::audio_controller::{AudioController, AudioControllerEvents, AudioData};
 use mpsc::{ReceiverSync, Sender};
@@ -155,31 +155,37 @@ impl MuteListener {
         let rx = self.rx.clone();
 
         Subscription::run_with(rx, |rx| {
-            let rx = rx.clone();
-            iced::stream::channel(1, async move |mut sender| {
-                let mut last_device_id = 0;
+            struct Data {
+                rx: Receiver,
+                last_device_id: usize,
+            }
 
+            let data = Data {
+                rx: rx.clone(),
+                last_device_id: 0,
+            };
+
+            stream::unfold(data, async move |mut data| {
                 loop {
                     let Event {
                         device_id,
                         muted,
                         initial,
-                    } = rx.0.receive().await;
+                    } = data.rx.0.receive().await;
 
                     // Avoid race between previous device messenger and new one.
-                    if device_id < last_device_id {
+                    if device_id < data.last_device_id {
                         continue;
                     }
 
                     // Avoid race between initial send and new device messenger.
-                    if initial && device_id == last_device_id {
+                    if initial && device_id == data.last_device_id {
                         continue;
                     }
 
-                    last_device_id = device_id;
+                    data.last_device_id = device_id;
 
-                    // Channel cannot be disconnected, no error can happen.
-                    let _ = sender.send(muted).await;
+                    return Some((muted, data));
                 }
             })
         })
