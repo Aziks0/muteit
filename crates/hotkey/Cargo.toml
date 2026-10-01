@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Benjamin DIDIER <contact@aziks.aleeas.com>
+# 
+# SPDX-License-Identifier: CC0-1.0
+
+[package]
+name = "hotkey"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = { workspace = true }
+windows-core = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+async-channel = "2.5.0"
+bitflags = { version = "2.13.2", features = ["serde"] }
+
+[build-dependencies]
+windows-bindgen = { workspace = true }
+
+[dev-dependencies]
+serial_test = "4.0.1"
+
+[lints]
+workspace = true

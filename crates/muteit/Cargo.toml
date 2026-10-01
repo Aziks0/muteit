@@ -13,15 +13,15 @@ alone = { path = "../alone" }
 audio = { path = "../audio" }
 autostart = { path = "../autostart" }
 dark = { path = "../dark" }
+hotkey = { path = "../hotkey" }
 key-t = { path = "../key-t" }
 mpsc = { path = "../mpsc/" }
 
 iced = { workspace = true }
-global-hotkey = { workspace = true, features = ["serde"] }
 windows-core = { workspace = true }
+serde = { workspace = true }
 
 anyhow = "1.0.104"
-serde = "1.0.219"
 toml = "0.9.5"
 tray-icon = "0.24.2"
 

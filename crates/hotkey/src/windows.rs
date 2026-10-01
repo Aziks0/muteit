@@ -1,0 +1,13 @@
+// SPDX-FileCopyrightText: 2026 Benjamin DIDIER <contact@aziks.aleeas.com>
+//
+// SPDX-License-Identifier: CC0-1.0
+
+#![allow(
+    non_snake_case,
+    clippy::upper_case_acronyms,
+    clippy::too_many_arguments
+)]
+
+include!(concat!(env!("OUT_DIR"), "/windows.rs"));
+
+pub use Windows::*;

@@ -9,6 +9,7 @@ members = [
   "crates/audio",
   "crates/autostart",
   "crates/dark",
+  "crates/hotkey",
   "crates/key-t",
   "crates/mpsc",
   "crates/muteit",
@@ -20,6 +21,7 @@ thiserror = "2.0.16"
 minijinja = { version = "2.12.0", default-features = false }
 futures-util = { version = "0.3.32", default-features = false }
 global-hotkey = { version = "0.7.0", default-features = false }
+serde = "1.0.229"
 
 # Same version needed for all the windows crates.
 [workspace.dependencies.windows-core]
@@ -27,6 +29,7 @@ version = "0.100.0"
 [workspace.dependencies.windows-bindgen]
 version = "0.100.0"
 
+# Same version needed for all the iced crates.
 [workspace.dependencies.iced]
 version = "0.14.0-rc.0.1"
 default-features = false
@@ -41,6 +44,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [patch.crates-io]
 iced = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
+iced_core = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
 
 [profile.release]
 codegen-units = 1
