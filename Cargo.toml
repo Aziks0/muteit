@@ -36,6 +36,9 @@ features = ["wgpu", "tiny-skia", "tokio"]
 # We prefer "module inception" over putting everything in `mod.rs`.
 module_inception = "allow"
 
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+
 [patch.crates-io]
 iced = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
 

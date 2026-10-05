@@ -9,9 +9,6 @@ edition = "2024"
 license = "MPL-2.0"
 publish = false
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
-
 [dependencies]
 futures-util = { workspace = true }
 
@@ -22,3 +19,6 @@ loom = { version = "0.7.2", features = ["futures"] }
 
 [dev-dependencies]
 futures-executor = "0.3.33"
+
+[lints]
+workspace = true
