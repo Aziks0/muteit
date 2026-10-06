@@ -11,6 +11,7 @@
 mod app;
 mod device_selector;
 mod error;
+mod hotkey_manager;
 mod mute_listener;
 mod settings;
 mod tray;

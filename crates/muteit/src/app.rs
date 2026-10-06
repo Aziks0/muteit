@@ -10,8 +10,10 @@ use iced::{Element, Subscription, Task, window};
 
 use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
+use hotkey::HotKeyEvent;
 
 use crate::device_selector::{self, DeviceInfo};
+use crate::hotkey_manager::HotKeyManager;
 use crate::mute_listener::{self, MuteListener};
 use crate::settings::{self, Settings};
 use crate::tray::{self, State, TrayIcon};
@@ -21,6 +23,7 @@ use crate::utils;
 pub enum Message {
     WindowClosed,
     DeviceSelected(Option<DeviceInfo>),
+    HotKeyEvent(HotKeyEvent),
     Tray(tray::Action),
     NewState(State),
     Settings(settings::Message),
@@ -30,6 +33,7 @@ pub struct App {
     enumerator: utils::DeviceEnumerator<Input>,
     controller: Option<AudioController>,
     mute_listener: MuteListener,
+    hotkey_manager: HotKeyManager,
     tray: TrayIcon,
     settings: Option<(window::Id, Settings)>,
 }
@@ -38,6 +42,7 @@ impl App {
     pub fn boot() -> Result<(Self, Task<Message>)> {
         let enumerator =
             DeviceEnumerator::<Input>::try_new().context("creating device enumerator")?;
+        let hotkey_manager = HotKeyManager::try_new()?;
         let tray = TrayIcon::try_new()?;
 
         Ok((
@@ -45,6 +50,7 @@ impl App {
                 enumerator: Rc::new(RefCell::new(enumerator)),
                 controller: None,
                 mute_listener: MuteListener::new(),
+                hotkey_manager,
                 tray,
                 settings: None,
             },
@@ -89,6 +95,15 @@ impl App {
                 };
 
                 self.mute_listener.update(message)?;
+
+                Task::none()
+            }
+            Message::HotKeyEvent(event) => {
+                let HotKeyEvent::Pressed { hotkey } = event;
+
+                // TODO: Check that `hotkey` is the right one to avoid data race.
+
+                utils::toggle_mute(&self.controller)?;
 
                 Task::none()
             }
@@ -143,6 +158,7 @@ impl App {
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
+            self.hotkey_manager.subscription().map(Message::HotKeyEvent),
             self.tray.subscription().map(Message::Tray),
             self.mute_listener
                 .subscription()
