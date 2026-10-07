@@ -13,8 +13,6 @@ use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEv
 
 use mpsc::ReceiverSync;
 
-use crate::maybe_bail;
-
 const SHOW_SETTINGS_EVENT_ID: &str = "muteit-show-settings";
 const EXIT_EVENT_ID: &str = "muteit-exit";
 
@@ -69,16 +67,12 @@ impl From<State> for bool {
 /// Tray icon action.
 #[derive(Debug)]
 pub enum Action {
-    /// Nothing to do.
-    None,
     /// Toggle the mute state.
     ToggleMute,
     /// Show the settings window.
     ShowSettings,
     /// Exit the application.
     Exit,
-    /// Handle an error.
-    Error(anyhow::Error),
 }
 
 /// Message for the tray icon.
@@ -186,12 +180,10 @@ impl TrayIcon {
     }
 
     /// Update the tray icon.
-    pub fn update(&mut self, message: Message) -> Action {
+    pub fn update(&mut self, message: Message) -> Result<()> {
         let Message::NewState(state) = message;
 
-        maybe_bail!(self.set_icon(state));
-
-        Action::None
+        self.set_icon(state)
     }
 
     /// Subscribe to tray icon events.

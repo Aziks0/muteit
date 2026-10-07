@@ -90,15 +90,11 @@ impl App {
                     }
                 };
 
-                let action = self.mute_listener.update(message);
+                self.mute_listener.update(message)?;
 
-                match action {
-                    mute_listener::Action::None => task,
-                    mute_listener::Action::Error(err) => return Err(err),
-                }
+                task
             }
             Message::Tray(action) => match action {
-                tray::Action::None => Task::none(),
                 tray::Action::ToggleMute => {
                     if let Some(controller) = &self.controller {
                         toggle_mute(controller).context("Toggling mute state.")?;
@@ -116,27 +112,23 @@ impl App {
 
                     let (id, task) = utils::open_window();
 
-                    self.settings = Some((id, Settings::new(self.enumerator.clone())));
+                    self.settings = Some((id, Settings::try_new(self.enumerator.clone())?));
 
                     task
                 }
                 tray::Action::Exit => iced::exit(),
-                tray::Action::Error(err) => return Err(err),
             },
             Message::NewState(state) => {
-                let action = self.tray.update(tray::Message::NewState(state));
+                self.tray.update(tray::Message::NewState(state))?;
 
-                match action {
-                    tray::Action::None => Task::none(),
-                    action => Task::done(Message::Tray(action)),
-                }
+                Task::none()
             }
             Message::Settings(message) => {
                 let Some((_, settings)) = &mut self.settings else {
                     return Ok(Task::none());
                 };
 
-                let action = settings.update(message);
+                let action = settings.update(message)?;
 
                 match action {
                     settings::Action::DeviceSelector(action) => match action {
@@ -147,7 +139,6 @@ impl App {
                             Task::done(Message::DeviceSelected(None))
                         }
                         device_selector::Action::None => Task::none(),
-                        device_selector::Action::Error(err) => return Err(err),
                     },
                 }
             }

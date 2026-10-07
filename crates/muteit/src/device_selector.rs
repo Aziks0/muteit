@@ -4,13 +4,12 @@
 
 use std::fmt::Display;
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use iced::Element;
 use iced::widget::{button, pick_list, row};
 
 use audio::enumerator::Flow;
 
-use crate::maybe_bail;
 use crate::utils::DeviceEnumerator;
 
 /// Device availability.
@@ -78,8 +77,6 @@ pub enum Action {
     NoDevice,
     /// Nothing to do.
     None,
-    /// Handle an error.
-    Error(anyhow::Error),
 }
 
 /// Message for [`DeviceSelector`].
@@ -109,7 +106,7 @@ pub struct DeviceSelector<F: Flow> {
 
 impl<F: Flow> DeviceSelector<F> {
     /// Create a new widget.
-    pub fn new(enumerator: DeviceEnumerator<F>, selected: Option<DeviceInfo>) -> Self {
+    pub fn try_new(enumerator: DeviceEnumerator<F>, selected: Option<DeviceInfo>) -> Result<Self> {
         let mut this = Self {
             enumerator,
             selected: selected
@@ -121,14 +118,14 @@ impl<F: Flow> DeviceSelector<F> {
             options: Vec::new(),
         };
 
-        this.update(Message::Refresh);
+        this.update(Message::Refresh)?;
 
-        this
+        Ok(this)
     }
 
     /// Update the widget.
-    pub fn update(&mut self, message: Message) -> Action {
-        match message {
+    pub fn update(&mut self, message: Message) -> Result<Action> {
+        Ok(match message {
             Message::DeviceSelected(option) => {
                 // Don't send any action if the new selected device is the same as the previous one.
                 if (self.selected.info.id == option.info.id
@@ -136,7 +133,7 @@ impl<F: Flow> DeviceSelector<F> {
                     // And don't select unavailable devices.
                     || option.availability == Availability::Unavailable
                 {
-                    return Action::None;
+                    return Ok(Action::None);
                 }
 
                 self.selected = option;
@@ -150,12 +147,10 @@ impl<F: Flow> DeviceSelector<F> {
                 }
             }
             Message::Refresh => {
-                maybe_bail!(
-                    self.enumerator
-                        .borrow_mut()
-                        .refresh()
-                        .context("Refreshing audio devices list.")
-                );
+                self.enumerator
+                    .borrow_mut()
+                    .refresh()
+                    .context("Refreshing audio devices list.")?;
 
                 // If there is no selected device, the selected one will be "None", so no need to
                 // search for it.
@@ -204,7 +199,7 @@ impl<F: Flow> DeviceSelector<F> {
 
                 Action::None
             }
-        }
+        })
     }
 
     /// View the widget.

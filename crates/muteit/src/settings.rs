@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use anyhow::Result;
 use iced::Element;
 
 use audio::enumerator::Input;
@@ -32,21 +33,21 @@ pub struct Settings {
 
 impl Settings {
     /// Create a new [`Settings`].
-    pub fn new(enumerator: DeviceEnumerator<Input>) -> Self {
-        Self {
-            device_selector: DeviceSelector::new(enumerator, None),
-        }
+    pub fn try_new(enumerator: DeviceEnumerator<Input>) -> Result<Self> {
+        Ok(Self {
+            device_selector: DeviceSelector::try_new(enumerator, None)?,
+        })
     }
 
     /// Update the settings.
-    pub fn update(&mut self, message: Message) -> Action {
-        match message {
+    pub fn update(&mut self, message: Message) -> Result<Action> {
+        Ok(match message {
             Message::DeviceSelector(message) => {
-                let action = self.device_selector.update(message);
+                let action = self.device_selector.update(message)?;
 
                 Action::DeviceSelector(action)
             }
-        }
+        })
     }
 
     /// View the settings.

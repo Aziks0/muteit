@@ -72,38 +72,3 @@ pub fn leak_error(error: impl Into<anyhow::Error>) -> &'static anyhow::Error {
     let error = Box::new(error.into());
     Box::leak(error)
 }
-
-/// Return an `Action::Error` if there is an error.
-///
-/// # Examples
-///
-/// ```no_run
-/// use std::fs::File;
-///
-/// # pub enum Message {}
-/// #
-/// pub enum Action {
-///     None,
-///     Error(anyhow::Error),
-/// }
-///
-/// pub fn update(message: Message) -> Action {
-///     let file = maybe_bail!(File::create("foo.txt"));
-///
-///     // Do things...
-///
-///     Action::None
-/// }
-/// ```
-#[macro_export]
-macro_rules! maybe_bail {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => {
-                std::hint::cold_path();
-                return Action::Error(err.into());
-            }
-        }
-    };
-}
