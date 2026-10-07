@@ -15,7 +15,7 @@ use crate::device_selector::{self, DeviceInfo};
 use crate::mute_listener::{self, MuteListener};
 use crate::settings::{self, Settings};
 use crate::tray::{self, State, TrayIcon};
-use crate::utils::{self, toggle_mute};
+use crate::utils;
 
 #[derive(Debug)]
 pub enum Message {
@@ -96,9 +96,7 @@ impl App {
             }
             Message::Tray(action) => match action {
                 tray::Action::ToggleMute => {
-                    if let Some(controller) = &self.controller {
-                        toggle_mute(controller).context("Toggling mute state.")?;
-                    }
+                    utils::toggle_mute(&self.controller)?;
 
                     Task::none()
                 }

@@ -6,19 +6,31 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::LazyLock;
 
-use crate::windows::Win32::{GetSystemMetrics, SM_CXICON, SM_CXSMICON};
+use anyhow::Context;
 use iced::window::settings::PlatformSpecific;
 use iced::window::settings::platform::IconType;
 use iced::{Size, Task, window};
 
 use audio::interface::audio_controller::AudioController;
 
+use crate::windows::Win32::{GetSystemMetrics, SM_CXICON, SM_CXSMICON};
+
 pub type DeviceEnumerator<F> = Rc<RefCell<audio::enumerator::DeviceEnumerator<F>>>;
 
 #[inline]
-pub fn toggle_mute(controller: &AudioController) -> audio::Result<()> {
-    let muted = controller.get_mute()?;
-    controller.set_mute(!muted)?;
+pub fn toggle_mute(controller: &Option<AudioController>) -> anyhow::Result<()> {
+    if let Some(controller) = controller {
+        // TODO: replace by `try` block when stabilized.
+        // https://doc.rust-lang.org/std/ops/trait.Try.html
+        let inner = || -> anyhow::Result<()> {
+            let muted = controller.get_mute()?;
+            controller.set_mute(!muted)?;
+
+            Ok(())
+        };
+        inner().context("Toggling mute state.")?;
+    }
+
     Ok(())
 }
 
