@@ -2,20 +2,21 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::fs::File;
+use std::hint;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use dioxus::Result;
-use dioxus::core::{AnyhowContext, use_hook};
-use dioxus::desktop::WindowEvent::CloseRequested;
-use dioxus::desktop::tao::event::Event::WindowEvent;
-use dioxus::desktop::{HotKey, use_wry_event_handler};
-use dioxus_signals::Signal;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
+
+use hotkey::HotKey;
 
 /// Information about the device to control.
-#[derive(Serialize, Deserialize, Clone, Default, PartialEq)]
-pub struct DeviceInformation {
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct DeviceInfo {
     /// Name of the device.
     pub name: String,
     /// ID of the device.
@@ -23,72 +24,77 @@ pub struct DeviceInformation {
 }
 
 /// Information about the hotkey to control the selected device.
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
-pub struct HotkeyInformation {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct HotkeyInfo {
     /// The [`HotKey`] ready to be used.
+    #[serde(flatten)]
     pub hotkey: HotKey,
-    /// The display character(s) of the key in the hotkey.
-    pub key: String,
+    /// The hotkey key as a string (i.e. what's written on the keycap).
+    pub key: SmolStr,
 }
 
-/// Configuration for the app.
-#[derive(Serialize, Deserialize, Clone, Copy)]
+/// User configuration wrapper for the app.
+#[derive(Serialize, Deserialize, Default)]
 pub struct AppConfig {
+    /// The config file.
+    // NOTE: This is only an option to make `serde` happy when deserializing.
+    #[serde(skip)]
+    file: Option<File>,
     /// Information about the device to control.
-    #[serde(flatten)]
-    pub information: Signal<Option<DeviceInformation>>,
+    pub device: Option<DeviceInfo>,
     /// Hotkey for controlling the device.
-    #[serde(flatten)]
-    pub hotkey: Signal<Option<HotkeyInformation>>,
+    pub hotkey: Option<HotkeyInfo>,
 }
 
 impl AppConfig {
-    /// Create a new configuration with default values.
-    fn new() -> Self {
-        Self {
-            information: Signal::new(None),
-            hotkey: Signal::new(None),
-        }
-    }
-
     /// Get the default configuration directory location.
-    pub fn get_directory() -> Result<&'static PathBuf> {
-        static DIRECTORY: OnceLock<PathBuf> = OnceLock::new();
+    fn get_directory() -> Result<PathBuf> {
+        let config_dir = {
+            let mut config_dir = PathBuf::new();
 
-        if let Some(path) = DIRECTORY.get() {
-            return Ok(path);
-        }
+            let appdata = std::env::var_os("LOCALAPPDATA")
+                .context("`LOCALAPPDATA` environment variable is not set.")?;
+            config_dir.push(appdata);
 
-        let appdata = std::env::var_os("LOCALAPPDATA")
-            .context("LOCALAPPDATA environment variable is not set.")?;
-        let appdata = PathBuf::from(appdata);
+            let config_dir_name = if cfg!(feature = "dev") {
+                "muteit!-dev"
+            } else {
+                "muteit!"
+            };
+            config_dir.push(config_dir_name);
+
+            config_dir
+        };
 
         // Don't use `create_dir_all` so that we get an error if `%LOCALAPPDATA%` points to a
         // non-existent directory.
-        let config_dir = appdata.join("muteit!");
         if !config_dir.try_exists().with_context(|| {
             format!(
-                "Could not verify that path `{}` exists.",
+                "Verifying that path `{}` exists.",
                 config_dir.to_string_lossy()
             )
         })? {
             std::fs::create_dir(&config_dir).with_context(|| {
                 format!(
-                    "Could not create dir at `{}`.",
+                    "Creating config directory at `{}`.",
                     config_dir.to_string_lossy()
                 )
             })?;
         };
 
-        Ok(DIRECTORY.get_or_init(|| config_dir))
+        Ok(config_dir)
     }
 
     /// Get the default configuration file location.
     fn get_location() -> Result<&'static PathBuf> {
         static LOCATION: OnceLock<PathBuf> = OnceLock::new();
 
-        let config_dir = Self::get_directory()?;
-        let config_path = config_dir.join("config.toml");
+        if let Some(config_path) = LOCATION.get() {
+            return Ok(config_path);
+        }
+
+        let mut config_path = Self::get_directory()?;
+        config_path.push("config.toml");
 
         Ok(LOCATION.get_or_init(|| config_path))
     }
@@ -96,55 +102,87 @@ impl AppConfig {
     /// Load the configuration from the default location.
     ///
     /// If the configuration file does not exist, it will be created with default values.
-    fn load() -> Result<Self> {
+    pub fn load() -> Result<Self> {
         let config_path = Self::get_location()?;
 
-        let config_content = match std::fs::read(config_path) {
-            Ok(content) => content,
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    return Ok(AppConfig::new());
-                }
-                return Err(err)
-                    .context(format!(
-                        "Could not read config file at `{}`.",
-                        config_path.to_string_lossy()
-                    ))
-                    .map_err(|err| err.into());
+        let mut file = File::options()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(config_path)
+            .with_context(|| {
+                format!(
+                    "Opening config file at `{}`.",
+                    config_path.to_string_lossy()
+                )
+            })?;
+
+        let mut this = {
+            let mut buf = String::new();
+            let bytes = file.read_to_string(&mut buf).with_context(|| {
+                format!(
+                    "Reading config file at `{}`.",
+                    config_path.to_string_lossy()
+                )
+            })?;
+
+            // Skip deserializing if the file is empty.
+            if bytes != 0 {
+                toml::from_str(&buf).context("Parsing config file.")?
+            } else {
+                AppConfig::default()
             }
         };
 
-        let config = toml::from_slice(&config_content).context("Could not parse config file.")?;
-        Ok(config)
+        this.file = Some(file);
+
+        Ok(this)
     }
 
     /// Save the configuration to the default location.
-    fn save(&self) -> Result<()> {
-        let config_path = Self::get_location()?;
-        let config_content = toml::to_string(self)?;
-        std::fs::write(config_path, config_content)?;
-        Ok(())
+    pub fn save(&mut self) -> Result<()> {
+        let config_content =
+            toml::to_string(&self).expect("`AppConfig` should be serializable to `TOML`.");
+
+        let file = self
+            .file
+            .as_mut()
+            .expect("`AppConfig` `File` should never be `None`.");
+
+        // TODO: replace by `try` block when stabilized.
+        let mut inner = move || {
+            use std::os::windows::fs::FileExt;
+
+            // We can't write nothing, so shrink the file to 0 if the config is empty.
+            if config_content.is_empty() {
+                return file.set_len(0);
+            }
+
+            let buf = config_content.as_bytes();
+            // Write to the start of the file.
+            // NOTE: The seek and the write are combined into one unique syscall that does both.
+            let written = file.seek_write(buf, 0)?;
+
+            // The config is really tiny, so it should have been written in a single call. But just
+            // in case, write the rest. The cursor has moved to the end of the previous write, no
+            // need to move it manually again.
+            if written != buf.len() {
+                hint::cold_path();
+
+                file.write_all(&buf[written..])?;
+            }
+
+            Ok(())
+        };
+
+        inner().with_context(|| {
+            let config_path = Self::get_location()
+                .expect("Config location should have been computed successfully.");
+            format!(
+                "Writing config file at `{}`.",
+                config_path.to_string_lossy()
+            )
+        })
     }
-}
-
-/// Hook to get the config.
-///
-/// # Notes:
-///
-/// Only one component should call this hook, because they will each load and get a different
-/// [`AppConfig`] when first calling it (i.e. modifying one will **not** update the others).
-pub fn use_config() -> Result<AppConfig> {
-    let config = use_hook::<Result<_>>(AppConfig::load)?;
-
-    use_wry_event_handler(move |event, _| {
-        if let WindowEvent {
-            event: CloseRequested,
-            ..
-        } = event
-        {
-            config.save().unwrap();
-        }
-    });
-
-    Ok(config)
 }

@@ -12,8 +12,9 @@ use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
 use hotkey::HotKeyEvent;
 
-use crate::device_selector::{self, DeviceInfo};
-use crate::hotkey_manager::HotKeyManager;
+use crate::config::{AppConfig, DeviceInfo};
+use crate::device_selector;
+use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
 use crate::settings::{self, Settings};
 use crate::tray::{self, State, TrayIcon};
@@ -30,6 +31,7 @@ pub enum Message {
 }
 
 pub struct App {
+    config: AppConfig,
     enumerator: utils::DeviceEnumerator<Input>,
     controller: Option<AudioController>,
     mute_listener: MuteListener,
@@ -40,16 +42,41 @@ pub struct App {
 
 impl App {
     pub fn boot() -> Result<(Self, Task<Message>)> {
+        let config = AppConfig::load()?;
+
+        let mut hotkey_manager = HotKeyManager::try_new()?;
+
+        if let Some(info) = &config.hotkey {
+            hotkey_manager.update(hotkey_manager::Message::RegisterHotKey(info.hotkey))?;
+        }
+
         let enumerator =
             DeviceEnumerator::<Input>::try_new().context("creating device enumerator")?;
-        let hotkey_manager = HotKeyManager::try_new()?;
-        let tray = TrayIcon::try_new()?;
+        let mut mute_listener = MuteListener::new();
+        let mut tray = TrayIcon::try_new()?;
+
+        let controller = if let Some(info) = &config.device
+            && let (mut controller, audio::enumerator::State::Active) = enumerator
+                .get_interface_and_state::<AudioController>(&info.id)
+                .context("Getting new AudioController interface.")?
+        {
+            mute_listener.update(mute_listener::Message::NewController(&mut controller))?;
+
+            Some(controller)
+        } else {
+            // `MuteListener`'s subscription doesn't give us a message with the new state when the
+            // device is inactive, so we need to set the state ourselves.
+            tray.update(tray::Message::NewState(tray::State::None))?;
+
+            None
+        };
 
         Ok((
             Self {
+                config,
                 enumerator: Rc::new(RefCell::new(enumerator)),
-                controller: None,
-                mute_listener: MuteListener::new(),
+                controller,
+                mute_listener,
                 hotkey_manager,
                 tray,
                 settings: None,
@@ -68,15 +95,17 @@ impl App {
                 // Drop the `Settings` so we don't keep the memory only needed for the view.
                 self.settings = None;
 
+                self.config.save()?;
+
                 Task::none()
             }
             Message::DeviceSelected(info) => {
-                let message = match info {
+                let message = match &info {
                     Some(info) => {
                         let controller = self
                             .enumerator
                             .borrow()
-                            .get_interface(info.id)
+                            .get_interface(&info.id)
                             .context("Getting new AudioController interface.")?;
 
                         self.controller = Some(controller);
@@ -94,6 +123,8 @@ impl App {
                     }
                 };
 
+                self.config.device = info;
+
                 self.mute_listener.update(message)?;
 
                 Task::none()
@@ -101,9 +132,11 @@ impl App {
             Message::HotKeyEvent(event) => {
                 let HotKeyEvent::Pressed { hotkey } = event;
 
-                // TODO: Check that `hotkey` is the right one to avoid data race.
-
-                utils::toggle_mute(&self.controller)?;
+                if let Some(info) = &self.config.hotkey
+                    && info.hotkey == hotkey
+                {
+                    utils::toggle_mute(&self.controller)?;
+                }
 
                 Task::none()
             }
@@ -123,7 +156,10 @@ impl App {
 
                     let (id, task) = utils::open_window();
 
-                    self.settings = Some((id, Settings::try_new(self.enumerator.clone())?));
+                    self.settings = Some((
+                        id,
+                        Settings::try_new(self.enumerator.clone(), self.config.device.clone())?,
+                    ));
 
                     task
                 }

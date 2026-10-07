@@ -10,6 +10,7 @@ use iced::widget::{button, pick_list, row};
 
 use audio::enumerator::Flow;
 
+use crate::config::DeviceInfo;
 use crate::utils::DeviceEnumerator;
 
 /// Device availability.
@@ -21,15 +22,6 @@ enum Availability {
     Unavailable,
     /// Not a device.
     None,
-}
-
-/// Information about the device to control.
-#[derive(Debug, Clone, Default)]
-pub struct DeviceInfo {
-    /// Name of the device.
-    pub name: String,
-    /// Id of the device.
-    pub id: String,
 }
 
 /// A device option for [`pick_list`].

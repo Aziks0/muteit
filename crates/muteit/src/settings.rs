@@ -7,6 +7,7 @@ use iced::Element;
 
 use audio::enumerator::Input;
 
+use crate::config::DeviceInfo;
 use crate::device_selector::{self, DeviceSelector};
 use crate::utils::DeviceEnumerator;
 
@@ -33,9 +34,12 @@ pub struct Settings {
 
 impl Settings {
     /// Create a new [`Settings`].
-    pub fn try_new(enumerator: DeviceEnumerator<Input>) -> Result<Self> {
+    pub fn try_new(
+        enumerator: DeviceEnumerator<Input>,
+        device_info: Option<DeviceInfo>,
+    ) -> Result<Self> {
         Ok(Self {
-            device_selector: DeviceSelector::try_new(enumerator, None)?,
+            device_selector: DeviceSelector::try_new(enumerator, device_info)?,
         })
     }
 

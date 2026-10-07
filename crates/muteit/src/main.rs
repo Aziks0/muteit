@@ -5,10 +5,10 @@
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
 // mod autostart;
-// mod config;
 // mod device;
 // mod hotkey_binding;
 mod app;
+mod config;
 mod device_selector;
 mod error;
 mod hotkey_manager;
