@@ -4,10 +4,12 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::LazyLock;
 
 use crate::windows::Win32::{GetSystemMetrics, SM_CXICON, SM_CXSMICON};
-use iced::Size;
+use iced::window::settings::PlatformSpecific;
 use iced::window::settings::platform::IconType;
+use iced::{Size, Task, window};
 
 use audio::interface::audio_controller::AudioController;
 
@@ -34,13 +36,35 @@ fn get_icon(metric: i32) -> IconType {
 }
 
 #[inline(always)]
-pub fn get_small_icon() -> IconType {
+fn get_small_icon() -> IconType {
     get_icon(SM_CXSMICON)
 }
 
 #[inline(always)]
-pub fn get_big_icon() -> IconType {
+fn get_big_icon() -> IconType {
     get_icon(SM_CXICON)
+}
+
+pub fn open_window<T>() -> (window::Id, Task<T>)
+where
+    T: Send + 'static,
+{
+    // Static so we don't call `utils::get_[size]_icon` everytime.
+    static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> =
+        LazyLock::new(|| window::Settings {
+            size: Size::new(800., 230.),
+            platform_specific: PlatformSpecific {
+                drag_and_drop: false,
+                icon: Some(get_small_icon()),
+                taskbar_icon: Some(get_big_icon()),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+    let (id, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
+
+    (id, task.discard())
 }
 
 #[cold]

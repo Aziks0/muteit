@@ -8,6 +8,7 @@
 // mod config;
 // mod device;
 // mod hotkey_binding;
+mod app;
 mod device_selector;
 mod error;
 mod mute_listener;
@@ -16,121 +17,47 @@ mod tray;
 mod utils;
 mod windows;
 
-use std::cell::RefCell;
 use std::env::args;
 use std::hint;
-use std::rc::Rc;
-use std::sync::LazyLock;
 
-use anyhow::Context;
 use iced::widget::text;
-use iced::window::settings::PlatformSpecific;
-use iced::{Element, Size, Subscription, Task, window};
+use iced::{Element, Subscription, Task, window};
 
 use alone::is_alone;
-use audio::enumerator::{DeviceEnumerator, Input};
-use audio::interface::audio_controller::AudioController;
 
-use crate::device_selector::DeviceInfo;
-use crate::mute_listener::MuteListener;
-use crate::settings::Settings;
-use crate::tray::{State, TrayIcon};
-use crate::utils::toggle_mute;
+use crate::app::App;
+
 use crate::windows::Win32::{COINIT_APARTMENTTHREADED, CoInitializeEx};
-
-fn open_window() -> (window::Id, Task<Message>) {
-    // Static so we don't call `utils::get_[size]_icon` everytime.
-    static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> =
-        LazyLock::new(|| window::Settings {
-            size: Size::new(800., 230.),
-            platform_specific: PlatformSpecific {
-                drag_and_drop: false,
-                icon: Some(utils::get_small_icon()),
-                taskbar_icon: Some(utils::get_big_icon()),
-                ..Default::default()
-            },
-            ..Default::default()
-        });
-
-    let (id, task) = window::open(DEFAULT_WINDOW_SETTINGS.clone());
-
-    (id, task.discard())
-}
-
-macro_rules! boot_maybe_bail {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => return (Self::Error($crate::utils::leak_error(err)), open_window().1),
-        }
-    };
-}
-
-macro_rules! app_maybe_bail {
-    ($result:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(err) => return Task::done(Message::Error($crate::utils::leak_error(err))),
-        }
-    };
-}
-
-#[inline(always)]
-fn into_error_task(error: impl Into<anyhow::Error>) -> Task<Message> {
-    Task::done(Message::Error(crate::utils::leak_error(error)))
-}
 
 #[derive(Debug)]
 enum Message {
-    WindowClosed,
-    DeviceSelected(Option<DeviceInfo>),
-    Tray(tray::Action),
-    NewState(State),
-    Settings(settings::Message),
+    App(app::Message),
     Error(&'static anyhow::Error),
-}
-
-struct InnerApp {
-    enumerator: utils::DeviceEnumerator<Input>,
-    controller: Option<AudioController>,
-    mute_listener: MuteListener,
-    tray: TrayIcon,
-    settings: Option<(window::Id, Settings)>,
+    WindowClosed,
 }
 
 #[allow(clippy::large_enum_variant)]
-enum App {
-    App(InnerApp),
+enum InfallibleApp {
+    App(App),
     Error(&'static anyhow::Error),
 }
 
-impl App {
+impl InfallibleApp {
     fn boot() -> (Self, Task<Message>) {
+        let (this, task) = match App::boot() {
+            Ok((app, task)) => (Self::App(app), task.map(Message::App)),
+            Err(err) => (Self::Error(utils::leak_error(err)), utils::open_window().1),
+        };
+
         let should_open = args().rev().find(|arg| arg == "--hidden").is_none();
 
-        let task = if should_open {
-            Task::done(Message::Tray(tray::Action::ShowSettings))
+        let open_task = if should_open {
+            Task::done(Message::App(app::Message::Tray(tray::Action::ShowSettings)))
         } else {
             Task::none()
         };
 
-        // let config_dir = AppConfig::get_directory().unwrap();
-
-        let enumerator = boot_maybe_bail!(
-            DeviceEnumerator::<Input>::try_new().context("creating device enumerator")
-        );
-        let tray = boot_maybe_bail!(TrayIcon::try_new());
-
-        (
-            Self::App(InnerApp {
-                enumerator: Rc::new(RefCell::new(enumerator)),
-                controller: None,
-                mute_listener: MuteListener::new(),
-                tray,
-                settings: None,
-            }),
-            task,
-        )
+        (this, task.chain(open_task))
     }
 
     fn title(&self, _window_id: window::Id) -> String {
@@ -138,153 +65,61 @@ impl App {
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
-        let Self::App(this) = self else {
-            hint::cold_path();
-
-            return match message {
-                Message::WindowClosed => iced::exit(),
-                _ => Task::none(),
-            };
-        };
-
-        match message {
-            Message::WindowClosed => {
-                // Drop the `Settings` so we don't keep the memory only needed for the view.
-                this.settings = None;
-
-                Task::none()
-            }
-            Message::DeviceSelected(info) => {
-                let mut task = Task::none();
-
-                let message = match info {
-                    Some(info) => {
-                        let controller = app_maybe_bail!(
-                            this.enumerator
-                                .borrow()
-                                .get_interface(info.id)
-                                .context("Getting new AudioController interface.")
-                        );
-
-                        this.controller = Some(controller);
-
-                        mute_listener::Message::NewController(this.controller.as_mut().unwrap())
-                    }
-                    None => {
-                        this.controller = None;
-
-                        // `MuteListener`'s subscription doesn't give us a message with the new
-                        // state when the device is inactive, so we need to set the state ourselves.
-                        task = Task::done(Message::NewState(State::None));
-
-                        mute_listener::Message::DeviceInactive
-                    }
-                };
-
-                let action = this.mute_listener.update(message);
-
-                match action {
-                    mute_listener::Action::None => task,
-                    mute_listener::Action::Error(err) => into_error_task(err),
-                }
-            }
-            Message::Tray(action) => match action {
-                tray::Action::None => Task::none(),
-                tray::Action::ToggleMute => {
-                    if let Some(controller) = &this.controller {
-                        app_maybe_bail!(toggle_mute(controller).context("Toggling mute state."))
-                    }
-
-                    Task::none()
-                }
-                tray::Action::ShowSettings => {
-                    if let Some((id, _)) = this.settings {
-                        return Task::batch([window::minimize(id, false), window::gain_focus(id)]);
-                    }
-
-                    let (id, task) = open_window();
-
-                    this.settings = Some((id, Settings::new(this.enumerator.clone())));
-
-                    task
-                }
-                tray::Action::Exit => iced::exit(),
-                tray::Action::Error(err) => into_error_task(err),
+        match (&mut *self, message) {
+            (Self::App(app), Message::App(message)) => match app.update(message) {
+                // NOTE: This is the 99.99% path.
+                Ok(task) => task.map(Message::App),
+                Err(err) => Task::done(Message::Error(utils::leak_error(err))),
             },
-            Message::NewState(state) => {
-                let action = this.tray.update(tray::Message::NewState(state));
+            (Self::App(app), Message::Error(err)) => {
+                hint::cold_path();
 
-                match action {
-                    tray::Action::None => Task::none(),
-                    action => Task::done(Message::Tray(action)),
-                }
-            }
-            Message::Settings(message) => {
-                let Some((_, settings)) = &mut this.settings else {
-                    return Task::none();
-                };
-
-                let action = settings.update(message);
-
-                match action {
-                    settings::Action::DeviceSelector(action) => match action {
-                        device_selector::Action::NewDevice(info) => {
-                            Task::done(Message::DeviceSelected(Some(info)))
-                        }
-                        device_selector::Action::NoDevice => {
-                            Task::done(Message::DeviceSelected(None))
-                        }
-                        device_selector::Action::None => Task::none(),
-                        device_selector::Action::Error(err) => into_error_task(err),
-                    },
-                }
-            }
-            Message::Error(err) => {
-                let task = if let Some((id, _)) = this.settings {
+                let task = if let Some(id) = app.window_id() {
                     window::request_user_attention(id, Some(window::UserAttention::Critical))
                 } else {
-                    open_window().1
+                    utils::open_window().1
                 };
 
                 *self = Self::Error(err);
 
                 task
             }
+            (Self::Error(_), Message::WindowClosed) => {
+                hint::cold_path();
+
+                iced::exit()
+            }
+            _ => {
+                hint::cold_path();
+
+                Task::none()
+            }
         }
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let Self::App(this) = self else {
-            hint::cold_path();
+        match self {
+            Self::App(app) => Subscription::batch([
+                app.subscription().map(Message::App),
+                error::subscription().map(Message::Error),
+            ]),
+            Self::Error(_) => {
+                hint::cold_path();
 
-            return window::close_events().map(|_| Message::WindowClosed);
-        };
-
-        Subscription::batch([
-            this.tray.subscription().map(Message::Tray),
-            this.mute_listener
-                .subscription()
-                .map(|msg| Message::NewState(msg.into())),
-            error::subscription().map(Message::Error),
-            window::close_events().map(|_| Message::WindowClosed),
-        ])
+                window::close_events().map(|_| Message::WindowClosed)
+            }
+        }
     }
 
-    fn view(&self, _window_id: window::Id) -> Element<'_, Message> {
-        let this = match self {
-            Self::App(app) => app,
+    fn view(&self, window_id: window::Id) -> Element<'_, Message> {
+        match self {
+            Self::App(app) => app.view(window_id).map(Message::App),
             Self::Error(err) => {
                 hint::cold_path();
 
-                return text!("An error occurred: {:?}", err).into();
+                text!("An error occurred: {:?}", err).into()
             }
-        };
-
-        let Some((_, settings)) = &this.settings else {
-            unreachable!("Call to `view` without `settings`.");
-        };
-
-        settings.view().map(Message::Settings)
+        }
     }
 }
 
@@ -306,9 +141,13 @@ fn main() {
     // https://github.com/rust-windowing/winit/issues/4690
     dark::setup();
 
-    iced::daemon(App::boot, App::update, App::view)
-        .title(App::title)
-        .subscription(App::subscription)
-        .run()
-        .unwrap();
+    iced::daemon(
+        InfallibleApp::boot,
+        InfallibleApp::update,
+        InfallibleApp::view,
+    )
+    .title(InfallibleApp::title)
+    .subscription(InfallibleApp::subscription)
+    .run()
+    .unwrap();
 }
