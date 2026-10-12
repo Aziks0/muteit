@@ -47,11 +47,10 @@ impl<T> Sender<T> {
             let new_tail = tail.wrapping_add(1);
 
             // Try to take ownership of the slot.
-            // NOTE: I'm not sure about the ordering.
             if let Err(real_tail) = self.channel.tail.compare_exchange(
                 tail,
                 new_tail,
-                Ordering::AcqRel,
+                Ordering::Relaxed,
                 Ordering::Relaxed,
             ) {
                 // We need a new slot.
