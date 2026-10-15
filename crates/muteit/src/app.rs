@@ -65,8 +65,6 @@ impl App {
                 Task::none()
             }
             Message::DeviceSelected(info) => {
-                let mut task = Task::none();
-
                 let message = match info {
                     Some(info) => {
                         let controller = self
@@ -84,7 +82,7 @@ impl App {
 
                         // `MuteListener`'s subscription doesn't give us a message with the new
                         // state when the device is inactive, so we need to set the state ourselves.
-                        task = Task::done(Message::NewState(State::None));
+                        self.tray.update(tray::Message::NewState(State::None))?;
 
                         mute_listener::Message::DeviceInactive
                     }
@@ -92,7 +90,7 @@ impl App {
 
                 self.mute_listener.update(message)?;
 
-                task
+                Task::none()
             }
             Message::Tray(action) => match action {
                 tray::Action::ToggleMute => {
