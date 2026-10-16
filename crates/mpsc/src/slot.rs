@@ -15,7 +15,7 @@ pub(crate) struct Slot<T> {
     is_empty: AtomicBool,
 }
 
-unsafe impl<T> Sync for Slot<T> {}
+unsafe impl<T: Send> Sync for Slot<T> {}
 
 impl<T> Slot<T> {
     /// Create a new uninitialized slot.
