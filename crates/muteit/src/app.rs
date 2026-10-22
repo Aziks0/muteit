@@ -12,7 +12,7 @@ use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
 use hotkey::HotKeyEvent;
 
-use crate::config::{AppConfig, DeviceInfo};
+use crate::config::AppConfig;
 use crate::device_selector;
 use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
@@ -23,7 +23,6 @@ use crate::utils;
 #[derive(Debug)]
 pub enum Message {
     WindowClosed,
-    DeviceSelected(Option<DeviceInfo>),
     HotKeyEvent(HotKeyEvent),
     Tray(tray::Action),
     NewState(State),
@@ -99,36 +98,6 @@ impl App {
 
                 Task::none()
             }
-            Message::DeviceSelected(info) => {
-                let message = match &info {
-                    Some(info) => {
-                        let controller = self
-                            .enumerator
-                            .borrow()
-                            .get_interface(&info.id)
-                            .context("Getting new AudioController interface.")?;
-
-                        self.controller = Some(controller);
-
-                        mute_listener::Message::NewController(self.controller.as_mut().unwrap())
-                    }
-                    None => {
-                        self.controller = None;
-
-                        // `MuteListener`'s subscription doesn't give us a message with the new
-                        // state when the device is inactive, so we need to set the state ourselves.
-                        self.tray.update(tray::Message::NewState(State::None))?;
-
-                        mute_listener::Message::DeviceInactive
-                    }
-                };
-
-                self.config.device = info;
-
-                self.mute_listener.update(message)?;
-
-                Task::none()
-            }
             Message::HotKeyEvent(event) => {
                 let HotKeyEvent::Pressed { hotkey } = event;
 
@@ -180,10 +149,35 @@ impl App {
                 match action {
                     settings::Action::DeviceSelector(action) => match action {
                         device_selector::Action::NewDevice(info) => {
-                            Task::done(Message::DeviceSelected(Some(info)))
+                            let controller = self
+                                .enumerator
+                                .borrow()
+                                .get_interface(&info.id)
+                                .context("Getting new AudioController interface.")?;
+
+                            self.controller = Some(controller);
+                            self.config.device = Some(info);
+
+                            self.mute_listener
+                                .update(mute_listener::Message::NewController(
+                                    self.controller.as_mut().unwrap(),
+                                ))?;
+
+                            Task::none()
                         }
                         device_selector::Action::NoDevice => {
-                            Task::done(Message::DeviceSelected(None))
+                            self.controller = None;
+                            self.config.device = None;
+
+                            self.mute_listener
+                                .update(mute_listener::Message::DeviceInactive)?;
+
+                            // `MuteListener`'s subscription doesn't give us a message with the new
+                            // state when the device is inactive, so we need to set the state
+                            // ourselves.
+                            self.tray.update(tray::Message::NewState(State::None))?;
+
+                            Task::none()
                         }
                         device_selector::Action::None => Task::none(),
                     },
