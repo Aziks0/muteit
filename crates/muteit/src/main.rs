@@ -126,7 +126,7 @@ impl InfallibleApp {
 }
 
 fn main() {
-    if !is_alone!(env!("APP_ID")).expect("CreateMutexW to work") {
+    if !is_alone!(env!("APP_ID")).expect("`CreateMutexW` should work.") {
         return;
     }
 
@@ -136,7 +136,7 @@ fn main() {
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED as _)
             .ok()
-            .expect("CoInitializeEx to work");
+            .expect("`CoInitializeEx` should work.");
     }
 
     // FIXME: `winit` might do it in a future version.

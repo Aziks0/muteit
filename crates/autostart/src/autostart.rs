@@ -73,7 +73,7 @@ impl AutoStart {
         } else {
             exe_path
                 .file_prefix()
-                .expect("path to exe should have a filename")
+                .expect("Path to exe should have a filename.")
                 .into()
         };
 

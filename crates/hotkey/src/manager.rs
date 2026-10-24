@@ -74,7 +74,7 @@ impl Drop for HotKeyManager {
         #[cfg(debug_assertions)]
         _success
             .ok()
-            .expect("`HotKeyManager` window to get destroyed.");
+            .expect("`HotKeyManager` window should get destroyed.");
     }
 }
 

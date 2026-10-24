@@ -26,7 +26,7 @@ fn convert_image_to_rgba(path: &Path) {
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let filename = path.with_extension("bin");
-    let filename = filename.file_name().expect("image to have a filename");
+    let filename = filename.file_name().expect("Image should have a filename.");
     let path = Path::new(&out_dir).join(filename);
     fs::write(&path, rgba).unwrap_or_else(|err| {
         panic!(
@@ -69,17 +69,17 @@ fn set_resource(mut ctx: Context) {
         );
 
         let source = fs::read_to_string("assets/bundle/resource.rc.jinja")
-            .expect("`assets/bundle/resource.rc.jinja` to be read");
+            .expect("assets/bundle/resource.rc.jinja should be read.");
 
         let mut env = Environment::empty();
         env.set_undefined_behavior(UndefinedBehavior::Strict);
         let resource = env
             .render_str(&source, ctx)
-            .expect("resource template to be rendered");
+            .expect("Resource template should be rendered.");
 
         let out_dir = env::var("OUT_DIR").unwrap();
         let path = Path::new(&out_dir).join("resource.rc");
-        std::fs::write(&path, resource).expect("resource.rc to be written");
+        std::fs::write(&path, resource).expect("resource.rc should be written.");
 
         res.add_toolkit_include(true);
         res.set_resource_file(path.to_str().unwrap());
@@ -88,7 +88,7 @@ fn set_resource(mut ctx: Context) {
         res.set_icon("assets/muteit_icon.ico");
     }
 
-    res.compile().expect("resource file to compile");
+    res.compile().expect("Resource file should compile.");
 }
 
 fn set_envs() -> Context {
@@ -98,7 +98,7 @@ fn set_envs() -> Context {
 
     let envs = env_file
         .parse::<Table>()
-        .expect("env.toml to be a valid toml file");
+        .expect("env.toml should be a valid toml file.");
 
     let mut temp = String::new();
     for (key, value) in &envs {

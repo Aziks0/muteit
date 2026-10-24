@@ -65,7 +65,7 @@ impl AudioController {
             .subscribers
             .iter()
             .position(|s| *s == id.0)
-            .expect("id should be in the list of subscribers");
+            .expect("id should be in the list of subscribers.");
         self.subscribers.swap_remove(index);
 
         Ok(())

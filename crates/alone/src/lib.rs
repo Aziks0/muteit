@@ -89,15 +89,16 @@ mod tests {
     #[test]
     fn i_am_alone() {
         let am_i_alone =
-            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463d").expect("`CreateMutexW` to work");
+            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463d").expect("`CreateMutexW` should work.");
         assert!(am_i_alone);
     }
 
     #[test]
     fn i_am_not_alone() {
-        let _ = is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` to work");
+        let _ =
+            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` should work.");
         let am_i_alone =
-            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` to work");
+            is_alone!("436a1306-cf3a-4b24-960f-dd1fe948463e").expect("`CreateMutexW` should work.");
         assert!(!am_i_alone)
     }
 

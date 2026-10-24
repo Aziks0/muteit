@@ -143,12 +143,12 @@ impl AppConfig {
     /// Save the configuration to the default location.
     pub fn save(&mut self) -> Result<()> {
         let config_content =
-            toml::to_string(&self).expect("`AppConfig` should be serializable to `TOML`.");
+            toml::to_string(&self).expect("`AppConfig` should be serializable to TOML.");
 
         let file = self
             .file
             .as_mut()
-            .expect("`AppConfig` `File` should never be `None`.");
+            .expect("`AppConfig`'s file should never be `None`.");
 
         // TODO: replace by `try` block when stabilized.
         let mut inner = move || {
@@ -178,7 +178,7 @@ impl AppConfig {
 
         inner().with_context(|| {
             let config_path = Self::get_location()
-                .expect("Config location should have been computed successfully.");
+                .expect("`AppConfig`'s config location should be successfully computed.");
             format!(
                 "Writing config file at `{}`.",
                 config_path.to_string_lossy()

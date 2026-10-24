@@ -66,7 +66,11 @@ where
         // give a null pointer as a device ID.
         let device_id = (!device_id.is_null())
             // SAFETY: This was given to us by the Windows API, it should be valid to read.
-            .then(|| unsafe { device_id.to_string().expect("Device ID to be valid UTF-8.") });
+            .then(|| unsafe {
+                device_id
+                    .to_string()
+                    .expect("Device ID should be valid UTF-8.")
+            });
 
         self.0
             .on_default_device_change(flow.into(), role.into(), device_id)
@@ -77,7 +81,11 @@ where
             return Err(E_INVALIDARG.into());
         }
         // SAFETY: This was given to us by the Windows API, it should be valid to read.
-        let device_id = unsafe { device_id.to_string().expect("Device ID to be valid UTF-8.") };
+        let device_id = unsafe {
+            device_id
+                .to_string()
+                .expect("Device ID should be valid UTF-8.")
+        };
 
         self.0.on_device_added(device_id)
     }
@@ -87,7 +95,11 @@ where
             return Err(E_INVALIDARG.into());
         }
         // SAFETY: This was given to us by the Windows API, it should be valid to read.
-        let device_id = unsafe { device_id.to_string().expect("Device ID to be valid UTF-8.") };
+        let device_id = unsafe {
+            device_id
+                .to_string()
+                .expect("Device ID should be valid UTF-8.")
+        };
 
         self.0.on_device_removed(device_id)
     }
@@ -101,7 +113,11 @@ where
             return Err(E_INVALIDARG.into());
         }
         // SAFETY: This was given to us by the Windows API, it should be valid to read.
-        let device_id = unsafe { device_id.to_string().expect("Device ID to be valid UTF-8.") };
+        let device_id = unsafe {
+            device_id
+                .to_string()
+                .expect("Device ID should be valid UTF-8.")
+        };
 
         self.0.on_device_state_change(device_id, new_state.into())
     }

@@ -118,11 +118,11 @@ impl TrayIcon {
         }));
 
         let mic_icon = Icon::from_rgba(MIC_ICON_RGBA.to_vec(), 32, 32)
-            .expect("mic.bin should be a correct icon");
+            .expect("mic.bin should be a correct icon.");
         let mic_off_icon = Icon::from_rgba(MIC_OFF_ICON_RGBA.to_vec(), 32, 32)
-            .expect("mic-off.bin should be a correct icon");
+            .expect("mic-off.bin should be a correct icon.");
         let mic_none_icon = Icon::from_rgba(MIC_NONE_ICON_RGBA.to_vec(), 32, 32)
-            .expect("mic-none.bin should be a correct icon");
+            .expect("mic-none.bin should be a correct icon.");
 
         let menu = Menu::new();
         menu.append(&MenuItem::with_id(

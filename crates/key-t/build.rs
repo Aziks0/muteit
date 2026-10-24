@@ -49,7 +49,7 @@ fn main() {
     let re = RegexBuilder::new(pattern)
         .multi_line(true)
         .build()
-        .expect("regex should be built");
+        .expect("Regex should be built.");
     let mut codes: Vec<_> = re
         .captures_iter(data)
         .filter_map(|caps| {
@@ -77,5 +77,6 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let path = Path::new(&out_dir).join("code_to_scancode.rs");
     let template = include_str!("assets/code_to_scancode.rs.jinja");
-    std::fs::write(path, render!(template, codes)).expect("code_to_scancode.rs to be written");
+    std::fs::write(path, render!(template, codes))
+        .expect("code_to_scancode.rs should get written.");
 }
