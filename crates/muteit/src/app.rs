@@ -17,7 +17,7 @@ use crate::device_selector;
 use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
 use crate::settings::{self, Settings};
-use crate::tray::{self, State, TrayIcon};
+use crate::tray::{self, TrayIcon};
 use crate::utils;
 
 #[derive(Debug)]
@@ -25,7 +25,7 @@ pub enum Message {
     WindowClosed,
     HotKeyEvent(HotKeyEvent),
     Tray(tray::Action),
-    NewState(State),
+    NewState(tray::State),
     Settings(settings::Message),
 }
 
@@ -175,7 +175,8 @@ impl App {
                             // `MuteListener`'s subscription doesn't give us a message with the new
                             // state when the device is inactive, so we need to set the state
                             // ourselves.
-                            self.tray.update(tray::Message::NewState(State::None))?;
+                            self.tray
+                                .update(tray::Message::NewState(tray::State::None))?;
 
                             Task::none()
                         }
