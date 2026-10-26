@@ -88,6 +88,38 @@ impl App {
         self.settings.as_ref().map(|(id, _)| *id)
     }
 
+    fn update_new_controller(&mut self, id: impl AsRef<str>) -> Result<()> {
+        let controller = self
+            .enumerator
+            .borrow()
+            .get_interface(id)
+            .context("Getting new AudioController interface.")?;
+
+        self.controller = Some(controller);
+
+        self.mute_listener
+            .update(mute_listener::Message::NewController(
+                self.controller.as_mut().unwrap(),
+            ))?;
+
+        Ok(())
+    }
+
+    fn update_no_controller(&mut self) -> Result<()> {
+        self.controller = None;
+
+        self.mute_listener
+            .update(mute_listener::Message::DeviceUnavailable)?;
+
+        // `MuteListener`'s subscription doesn't give us a message with the new
+        // state when the device is inactive, so we need to set the state
+        // ourselves.
+        self.tray
+            .update(tray::Message::NewState(tray::State::None))?;
+
+        Ok(())
+    }
+
     pub fn update(&mut self, message: Message) -> Result<Task<Message>> {
         Ok(match message {
             Message::WindowClosed => {
@@ -149,34 +181,14 @@ impl App {
                 match action {
                     settings::Action::DeviceSelector(action) => match action {
                         device_selector::Action::NewDevice(info) => {
-                            let controller = self
-                                .enumerator
-                                .borrow()
-                                .get_interface(&info.id)
-                                .context("Getting new AudioController interface.")?;
-
-                            self.controller = Some(controller);
+                            self.update_new_controller(&info.id)?;
                             self.config.device = Some(info);
-
-                            self.mute_listener
-                                .update(mute_listener::Message::NewController(
-                                    self.controller.as_mut().unwrap(),
-                                ))?;
 
                             Task::none()
                         }
                         device_selector::Action::NoDevice => {
-                            self.controller = None;
+                            self.update_no_controller()?;
                             self.config.device = None;
-
-                            self.mute_listener
-                                .update(mute_listener::Message::DeviceUnavailable)?;
-
-                            // `MuteListener`'s subscription doesn't give us a message with the new
-                            // state when the device is inactive, so we need to set the state
-                            // ourselves.
-                            self.tray
-                                .update(tray::Message::NewState(tray::State::None))?;
 
                             Task::none()
                         }
