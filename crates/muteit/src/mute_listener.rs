@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -15,17 +14,6 @@ use mpsc::{ReceiverSync, Sender};
 
 /// Error message used when the channel is full.
 const CHANNEL_FULL_ERROR: &str = "mute_listener channel is full.";
-
-/// Wrapper around [`ReceiverSync<Event>`]. Used in [`Subscription`].
-#[derive(Clone)]
-struct Receiver(Arc<ReceiverSync<Event>>);
-
-impl Hash for Receiver {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::any::TypeId::of::<Self>().hash(state);
-        "mute_listener".as_bytes().hash(state);
-    }
-}
 
 /// Device mute state event.
 #[derive(Clone, Copy, Debug)]
@@ -83,7 +71,7 @@ pub enum Message<'a> {
 pub struct MuteListener {
     device_id: usize,
     tx: Sender<Event>,
-    rx: Receiver,
+    rx: Arc<ReceiverSync<Event>>,
 }
 
 impl MuteListener {
@@ -95,7 +83,7 @@ impl MuteListener {
 
         Self {
             device_id: 0,
-            rx: Receiver(Arc::new(rx.into())),
+            rx: Arc::new(rx.into()),
             tx,
         }
     }
@@ -134,7 +122,19 @@ impl MuteListener {
 
     /// Subscribe to mute events.
     pub fn subscription(&self) -> Subscription<bool> {
-        let rx = self.rx.clone();
+        use std::hash::{Hash, Hasher};
+
+        #[derive(Clone)]
+        struct Receiver(Arc<ReceiverSync<Event>>);
+
+        impl Hash for Receiver {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                std::any::TypeId::of::<Self>().hash(state);
+                "mute_listener".as_bytes().hash(state);
+            }
+        }
+
+        let rx = Receiver(self.rx.clone());
 
         Subscription::run_with(rx, |rx| {
             struct Data {

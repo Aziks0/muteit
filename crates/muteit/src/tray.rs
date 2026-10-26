@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
@@ -22,17 +21,6 @@ const MIC_NONE_ICON_RGBA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/mic-
 
 /// Error message used when the channel is full.
 const CHANNEL_FULL_ERROR: &str = "tray_icon channel is full.";
-
-/// Wrapper around [`ReceiverSync<Event>`]. Used in [`Subscription`].
-#[derive(Clone)]
-struct Receiver(Arc<ReceiverSync<Action>>);
-
-impl Hash for Receiver {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::any::TypeId::of::<Self>().hash(state);
-        "tray_icon".as_bytes().hash(state);
-    }
-}
 
 /// Tray icon/audio device state.
 #[derive(Clone, Copy, Debug)]
@@ -89,7 +77,7 @@ pub struct TrayIcon {
     mic_icon: Icon,
     mic_off_icon: Icon,
     mic_none_icon: Icon,
-    rx: Receiver,
+    rx: Arc<ReceiverSync<Action>>,
 }
 
 impl TrayIcon {
@@ -158,7 +146,7 @@ impl TrayIcon {
             mic_icon,
             mic_off_icon,
             mic_none_icon,
-            rx: Receiver(Arc::new(rx.into())),
+            rx: Arc::new(rx.into()),
         })
     }
 
@@ -188,7 +176,19 @@ impl TrayIcon {
 
     /// Subscribe to tray icon events.
     pub fn subscription(&self) -> Subscription<Action> {
-        let rx = self.rx.clone();
+        use std::hash::{Hash, Hasher};
+
+        #[derive(Clone)]
+        struct Receiver(Arc<ReceiverSync<Action>>);
+
+        impl Hash for Receiver {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                std::any::TypeId::of::<Self>().hash(state);
+                "tray_icon".as_bytes().hash(state);
+            }
+        }
+
+        let rx = Receiver(self.rx.clone());
 
         Subscription::run_with(rx, |rx| {
             let rx = rx.clone();

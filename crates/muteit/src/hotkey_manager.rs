@@ -2,23 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::hash::Hash;
-
 use anyhow::{Context, Result};
 use iced::Subscription;
 
-use hotkey::{HotKey, HotKeyEvent};
-
-/// Wrapper around [`hotkey::Receiver<HotKeyEvent>`]. Used in [`Subscription`].
-#[derive(Clone)]
-struct Receiver(hotkey::Receiver<HotKeyEvent>);
-
-impl Hash for Receiver {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::any::TypeId::of::<Self>().hash(state);
-        "hotkey_manager".as_bytes().hash(state);
-    }
-}
+use hotkey::{HotKey, HotKeyEvent, Receiver};
 
 /// Message for [`HotKeyManager`].
 ///
@@ -33,7 +20,7 @@ pub enum Message {
 /// Register hotkeys and listen to hotkeys event.
 pub struct HotKeyManager {
     manager: hotkey::HotKeyManager,
-    rx: Receiver,
+    rx: Receiver<HotKeyEvent>,
 }
 
 impl HotKeyManager {
@@ -41,10 +28,7 @@ impl HotKeyManager {
         let manager = hotkey::HotKeyManager::try_new().context("Creating `HotKeyManager`.")?;
         let rx = manager.receiver();
 
-        Ok(Self {
-            manager,
-            rx: Receiver(rx),
-        })
+        Ok(Self { manager, rx })
     }
 
     /// Update the hotkey manager.
@@ -59,7 +43,19 @@ impl HotKeyManager {
 
     /// Subscribe to [`HotKeyEvent`]s.
     pub fn subscription(&self) -> Subscription<HotKeyEvent> {
-        let rx = self.rx.clone();
+        use std::hash::{Hash, Hasher};
+
+        #[derive(Clone)]
+        struct Receiver(hotkey::Receiver<HotKeyEvent>);
+
+        impl Hash for Receiver {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                std::any::TypeId::of::<Self>().hash(state);
+                "hotkey_manager".as_bytes().hash(state);
+            }
+        }
+
+        let rx = Receiver(self.rx.clone());
 
         Subscription::run_with(rx, |rx| rx.0.clone())
     }
