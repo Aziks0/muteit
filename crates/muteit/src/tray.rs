@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use iced::Subscription;
-use iced::futures::stream;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
@@ -177,6 +176,10 @@ impl TrayIcon {
     /// Subscribe to tray icon events.
     pub fn subscription(&self) -> Subscription<Action> {
         use std::hash::{Hash, Hasher};
+        use std::pin::{Pin, pin};
+        use std::task::{Context, Poll};
+
+        use iced::futures::Stream;
 
         #[derive(Clone)]
         struct Receiver(Arc<ReceiverSync<Action>>);
@@ -188,16 +191,16 @@ impl TrayIcon {
             }
         }
 
+        impl Stream for Receiver {
+            type Item = Action;
+
+            fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+                pin!(self.0.receive()).poll(cx).map(Some)
+            }
+        }
+
         let rx = Receiver(self.rx.clone());
 
-        Subscription::run_with(rx, |rx| {
-            let rx = rx.clone();
-
-            stream::unfold(rx, async move |rx| {
-                let event = rx.0.receive().await;
-
-                Some((event, rx))
-            })
-        })
+        Subscription::run_with(rx, |rx| rx.clone())
     }
 }

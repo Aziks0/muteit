@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Context, Result, anyhow};
 use iced::Subscription;
-use iced::futures::stream;
 
 use audio::interface::audio_controller::{AudioController, AudioControllerEvents, AudioData};
 use mpsc::{ReceiverSync, Sender};
@@ -123,6 +122,10 @@ impl MuteListener {
     /// Subscribe to mute events.
     pub fn subscription(&self) -> Subscription<bool> {
         use std::hash::{Hash, Hasher};
+        use std::pin::{Pin, pin};
+        use std::task::{Context, Poll, ready};
+
+        use iced::futures::Stream;
 
         #[derive(Clone)]
         struct Receiver(Arc<ReceiverSync<Event>>);
@@ -138,38 +141,47 @@ impl MuteListener {
 
         Subscription::run_with(rx, |rx| {
             struct Data {
-                rx: Receiver,
+                rx: Arc<ReceiverSync<Event>>,
                 last_device_id: usize,
             }
 
-            let data = Data {
-                rx: rx.clone(),
-                last_device_id: 0,
-            };
+            impl Stream for Data {
+                type Item = bool;
 
-            stream::unfold(data, async move |mut data| {
-                loop {
-                    let Event {
-                        device_id,
-                        muted,
-                        initial,
-                    } = data.rx.0.receive().await;
+                fn poll_next(
+                    mut self: Pin<&mut Self>,
+                    cx: &mut Context<'_>,
+                ) -> Poll<Option<Self::Item>> {
+                    loop {
+                        let event = pin!(self.rx.receive()).poll(cx);
 
-                    // Avoid race between previous device messenger and new one.
-                    if device_id < data.last_device_id {
-                        continue;
+                        let Event {
+                            device_id,
+                            muted,
+                            initial,
+                        } = ready!(event);
+
+                        // Avoid race between previous device messenger and new one.
+                        if device_id < self.last_device_id {
+                            continue;
+                        }
+
+                        // Avoid race between initial send and new device messenger.
+                        if initial && device_id == self.last_device_id {
+                            continue;
+                        }
+
+                        self.last_device_id = device_id;
+
+                        return Poll::Ready(Some(muted));
                     }
-
-                    // Avoid race between initial send and new device messenger.
-                    if initial && device_id == data.last_device_id {
-                        continue;
-                    }
-
-                    data.last_device_id = device_id;
-
-                    return Some((muted, data));
                 }
-            })
+            }
+
+            Data {
+                rx: rx.0.clone(),
+                last_device_id: 0,
+            }
         })
     }
 }
