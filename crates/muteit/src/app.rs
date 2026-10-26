@@ -170,7 +170,7 @@ impl App {
                             self.config.device = None;
 
                             self.mute_listener
-                                .update(mute_listener::Message::DeviceInactive)?;
+                                .update(mute_listener::Message::DeviceUnavailable)?;
 
                             // `MuteListener`'s subscription doesn't give us a message with the new
                             // state when the device is inactive, so we need to set the state

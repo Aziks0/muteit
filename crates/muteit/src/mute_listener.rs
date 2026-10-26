@@ -63,7 +63,7 @@ impl AudioControllerEvents for Messenger {
 /// See [`MuteListener::update`].
 pub enum Message<'a> {
     NewController(&'a mut AudioController),
-    DeviceInactive,
+    DeviceUnavailable,
 }
 
 /// Listen to an audio device's mute events.
@@ -94,7 +94,7 @@ impl MuteListener {
         self.device_id = device_id;
 
         let Message::NewController(controller) = message else {
-            // NOTE: We still need the `device_id` increment when the device becomes inactive.
+            // NOTE: We still need the `device_id` increment when the device becomes unavailable.
             return Ok(());
         };
 
