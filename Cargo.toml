@@ -33,7 +33,7 @@ version = "0.100.0"
 [workspace.dependencies.iced]
 version = "0.14.0-rc.0.2"
 default-features = false
-features = ["tiny-skia", "tokio"]
+features = ["tiny-skia", "tokio", "crisp", "advanced"]
 
 [workspace.lints.clippy]
 # We prefer "module inception" over putting everything in `mod.rs`.

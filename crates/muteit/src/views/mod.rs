@@ -2,6 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod widgets;
+
+mod theme;
+pub use theme::style;
+
 pub mod device_selector;
 pub mod hotkey_binding;
 pub mod settings;

@@ -4,16 +4,22 @@
 
 use std::debug_assert_matches;
 
+use iced::alignment::Vertical;
+use iced::font::Weight;
 use iced::keyboard::key::{Code, NativeCode, Physical as IcedPhysicalKey};
 use iced::keyboard::{Key, Modifiers as IcedModifiers};
-use iced::widget::{button, column, row, space, text};
-use iced::{Element, Subscription, keyboard};
+use iced::widget::{column, container, row, space, text};
+use iced::{Background, Border, Color, Element, Font, Length, Padding, Subscription, keyboard};
 use smol_str::{SmolStr, StrExt, format_smolstr};
 
 use hotkey::{HotKey, Modifiers};
 
 use crate::config::HotkeyInfo;
 use crate::utils;
+use crate::views::theme::{
+    BORDER, BORDER_RADIUS, HEIGHT, HOVER_BORDER, PADDING, PRESSED_BORDER, color,
+};
+use crate::views::widgets::{button, kbd, label};
 
 /// Error when trying to get a bind for a hotkey.
 ///
@@ -124,19 +130,14 @@ impl KeyPresses {
         let mut elements = Vec::with_capacity(12);
 
         for (name, _) in self.modifiers.iter_names() {
-            elements.push(text(name).into());
-            elements.push(space().width(4).into());
+            elements.push(kbd(name));
         }
 
         for key in &self.keys {
-            elements.push(text(key.text.as_str()).into());
-            elements.push(space().width(4).into());
+            elements.push(kbd(key.text.as_str()));
         }
 
-        // Remove the last `space`.
-        elements.pop();
-
-        Some(row(elements).into())
+        Some(row(elements).spacing(4).into())
     }
 }
 
@@ -324,8 +325,10 @@ impl HotkeyBinding {
         })
     }
 
-    /// View the component.
-    pub fn view(&self) -> Element<'_, Message> {
+    /// Create a new hotkey binder element.
+    fn binder<'a>(&'a self) -> iced::widget::Button<'a, Message> {
+        use iced::widget::button::{Status, Style};
+
         let content = self.key_presses.as_element().unwrap_or_else(|| {
             let content = if self.is_binding {
                 "Press a key..."
@@ -333,20 +336,102 @@ impl HotkeyBinding {
                 "Click to start binding"
             };
 
-            text(content).into()
+            text(content)
+                .height(Length::Fill)
+                .align_y(Vertical::Center)
+                .into()
         });
 
-        let err: Element<_> = self
-            .error
-            .map_or_else(|| space().into(), |err| text(err.as_str()).into());
+        iced::widget::button(content)
+            .style(|_, status| {
+                let background = Some(Background::Color(Color::TRANSPARENT));
+
+                if self.error.is_some() {
+                    return Style {
+                        background,
+                        text_color: color::TEXT,
+                        border: Border {
+                            color: color::DANGER,
+                            radius: BORDER_RADIUS.bottom_left(0),
+                            ..BORDER
+                        },
+                        ..Default::default()
+                    };
+                }
+
+                if self.is_binding {
+                    return Style {
+                        background,
+                        text_color: color::TEXT,
+                        border: BORDER.color(Color::WHITE),
+                        ..Default::default()
+                    };
+                }
+
+                match status {
+                    Status::Active | Status::Disabled => Style {
+                        background,
+                        text_color: color::TEXT,
+                        border: BORDER,
+                        ..Default::default()
+                    },
+                    Status::Hovered => Style {
+                        background,
+                        text_color: color::TEXT,
+                        border: HOVER_BORDER,
+                        ..Default::default()
+                    },
+                    Status::Pressed => Style {
+                        background,
+                        text_color: color::TEXT,
+                        border: PRESSED_BORDER,
+                        ..Default::default()
+                    },
+                }
+            })
+            .width(Length::Fill)
+            .height(HEIGHT)
+            .padding(PADDING.vertical(6))
+    }
+
+    /// View the component.
+    pub fn view(&self) -> Element<'_, Message> {
+        let error_message: Element<_> = self.error.map_or_else(
+            || space().into(),
+            |err| {
+                container(text(err.as_str()).size(14).font(Font {
+                    weight: Weight::Bold,
+                    ..Font::DEFAULT
+                }))
+                .style(|_| iced::widget::container::Style {
+                    background: Some(Background::Color(color::DANGER)),
+                    border: Border {
+                        radius: BORDER_RADIUS.top(0),
+                        ..Default::default()
+                    },
+                    text_color: Some(color::TEXT),
+                    ..Default::default()
+                })
+                .padding(Padding::default().horizontal(4).vertical(1))
+                .into()
+            },
+        );
 
         column![
-            row![
-                button(content).on_press(Message::StartBinding),
-                button("Unbind").on_press(Message::Unbind)
-            ],
-            err
+            label("Hotkey"),
+            column![
+                row![
+                    self.binder().on_press(Message::StartBinding),
+                    button("Unbind").on_press(Message::Unbind)
+                ]
+                .spacing(4)
+                .width(Length::Fill),
+                error_message
+            ]
+            .spacing(-2.)
+            .width(Length::Fill)
         ]
+        .width(Length::Fill)
         .into()
     }
 }

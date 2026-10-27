@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use anyhow::Result;
-use iced::widget::column;
-use iced::{Element, Subscription};
+use iced::widget::{column, container, responsive};
+use iced::{Element, Length, Padding, Subscription};
 
 use audio::enumerator::Input;
 
@@ -76,10 +76,28 @@ impl Settings {
 
     /// View the settings.
     pub fn view(&self) -> Element<'_, Message> {
-        column![
-            self.device_selector.view().map(Message::DeviceSelector),
-            self.hotkey_binding.view().map(Message::HotkeyBinding)
-        ]
+        responsive(|available_space| {
+            let padding = {
+                let available_width = available_space.width;
+                let element_width = (5. / 6.) * available_width;
+                let empty_width = available_width - element_width;
+                let horizontal_padding = empty_width / 2.;
+
+                Padding::default().horizontal(horizontal_padding.round())
+            };
+
+            container(
+                column![
+                    self.device_selector.view().map(Message::DeviceSelector),
+                    self.hotkey_binding.view().map(Message::HotkeyBinding)
+                ]
+                .spacing(8)
+                .width(Length::Fill),
+            )
+            .padding(padding.bottom(14))
+            .center_y(Length::Fill)
+            .into()
+        })
         .into()
     }
 }

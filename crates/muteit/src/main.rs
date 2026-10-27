@@ -22,8 +22,9 @@ use views::*;
 use std::env::args;
 use std::hint;
 
+use iced::theme::Style;
 use iced::widget::text;
-use iced::{Element, Subscription, Task, window};
+use iced::{Element, Subscription, Task, Theme, window};
 
 use alone::is_alone;
 
@@ -64,6 +65,10 @@ impl InfallibleApp {
 
     fn title(&self, _window_id: window::Id) -> String {
         String::from("muteit!")
+    }
+
+    fn style(&self, _theme: &Theme) -> Style {
+        style()
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -149,6 +154,7 @@ fn main() {
         InfallibleApp::view,
     )
     .title(InfallibleApp::title)
+    .style(InfallibleApp::style)
     .subscription(InfallibleApp::subscription)
     .run()
     .unwrap();

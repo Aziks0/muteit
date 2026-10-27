@@ -5,13 +5,14 @@
 use std::fmt::Display;
 
 use anyhow::{Context, Result};
-use iced::Element;
-use iced::widget::{button, pick_list, row};
+use iced::widget::{column, row};
+use iced::{Element, Length};
 
 use audio::enumerator::Flow;
 
 use crate::config::DeviceInfo;
 use crate::utils::DeviceEnumerator;
+use crate::views::widgets::{button, label, pick_list};
 
 /// Device availability.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -24,7 +25,7 @@ enum Availability {
     None,
 }
 
-/// A device option for [`pick_list`].
+/// A device option for [`pick_list`](iced::widget::pick_list).
 #[derive(Debug, Clone)]
 struct DeviceOption {
     info: DeviceInfo,
@@ -196,13 +197,18 @@ impl<F: Flow> DeviceSelector<F> {
 
     /// View the widget.
     pub fn view(&self) -> Element<'_, Message> {
-        row![
-            pick_list(
-                self.options.as_slice(),
-                Some(&self.selected),
-                Message::DeviceSelected,
-            ),
-            button("Refresh").on_press(Message::Refresh)
+        column![
+            label("Input device"),
+            row![
+                pick_list(
+                    self.options.as_slice(),
+                    Some(&self.selected),
+                    Message::DeviceSelected,
+                ),
+                button("Refresh").on_press(Message::Refresh)
+            ]
+            .spacing(4)
+            .width(Length::Fill)
         ]
         .into()
     }
