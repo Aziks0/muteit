@@ -42,30 +42,33 @@ mod windows;
 #[macro_export]
 macro_rules! is_alone {
     ($unique:expr) => {{
-        const MUTEX_NAME_STR: &str = $crate::__private::concat!($unique, "\0");
-        const MUTEX_NAME_WSTR: &$crate::__private::Utf16Str =
-            $crate::__private::utf16str!(MUTEX_NAME_STR);
-        const MUTEX_NAME_PTR: *const u16 = MUTEX_NAME_WSTR.as_ptr();
-        const MUTEX_NAME_PCWSTR: $crate::__private::PCWSTR =
-            $crate::__private::PCWSTR::from_raw(MUTEX_NAME_PTR);
-        $crate::__private::is_alone(MUTEX_NAME_PCWSTR)
+        const MUTEX_NAME: $crate::__private::PCWSTR = {
+            const C_STR: &str = $crate::__private::concat!($unique, "\0");
+            const WSTR: &$crate::__private::Utf16Str = $crate::__private::utf16str!(C_STR);
+
+            $crate::__private::PCWSTR::from_raw(WSTR.as_ptr())
+        };
+
+        $crate::__private::is_alone(MUTEX_NAME)
     }};
 }
 
+// Export for macro.
 #[doc(hidden)]
 pub mod __private {
-    // Re-export for macro.
-    pub use crate::is_alone;
+    #[doc(hidden)]
     pub use constcat::concat;
+    #[doc(hidden)]
     pub use widestring::{Utf16Str, utf16str};
+    #[doc(hidden)]
     pub use windows_core::PCWSTR;
 
-    use windows_core::{HRESULT, WIN32_ERROR};
-
-    use crate::windows::Win32::{CreateMutexW, ERROR_ALREADY_EXISTS};
-
+    #[doc(hidden)]
     #[inline]
     pub fn is_alone(unique: PCWSTR) -> Result<bool, String> {
+        use crate::windows::Win32::{CreateMutexW, ERROR_ALREADY_EXISTS};
+        use windows_core::{HRESULT, WIN32_ERROR};
+
         // We don't care about the returned handle. We just care about whether there is an error or not.
         // Windows won't destroy the mutex until we either call `CloseHandle` or the program exits.
         let failed = unsafe { CreateMutexW(None, false, unique).0.is_null() };
@@ -84,7 +87,7 @@ pub mod __private {
     }
 }
 
-#[cfg(all(test, target_os = "windows"))]
+#[cfg(test)]
 mod tests {
     #[test]
     fn i_am_alone() {
