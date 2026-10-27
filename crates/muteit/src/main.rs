@@ -9,7 +9,7 @@
 // mod hotkey_binding;
 mod app;
 mod config;
-mod device;
+mod device_listener;
 mod device_selector;
 mod error;
 mod hotkey_manager;

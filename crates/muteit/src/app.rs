@@ -13,7 +13,7 @@ use audio::interface::audio_controller::AudioController;
 use hotkey::HotKeyEvent;
 
 use crate::config::AppConfig;
-use crate::device::{self, DeviceListener};
+use crate::device_listener::{self, DeviceListener};
 use crate::device_selector;
 use crate::hotkey_manager::{self, HotKeyManager};
 use crate::mute_listener::{self, MuteListener};
@@ -25,7 +25,7 @@ use crate::utils;
 pub enum Message {
     WindowClosed,
     HotKeyEvent(HotKeyEvent),
-    NewDeviceState(device::Event),
+    NewDeviceState(device_listener::Event),
     Tray(tray::Action),
     NewState(tray::State),
     Settings(settings::Message),
@@ -149,7 +149,7 @@ impl App {
                 Task::none()
             }
             Message::NewDeviceState(event) => {
-                let device::Event { device_id, state } = event;
+                let device_listener::Event { device_id, state } = event;
 
                 // We need `&mut self` to call `update_new_controller`, which prevents borrowing
                 // `self.config.device.id` at the same time. To satisfy the borrow checker, we
@@ -164,8 +164,10 @@ impl App {
                     && info.id == device_id
                 {
                     match state {
-                        device::State::Available => self.update_new_controller(&info.id)?,
-                        device::State::Unavailable => self.update_no_controller()?,
+                        device_listener::State::Available => {
+                            self.update_new_controller(&info.id)?
+                        }
+                        device_listener::State::Unavailable => self.update_no_controller()?,
                     };
                 }
 
