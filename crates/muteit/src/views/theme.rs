@@ -4,7 +4,17 @@
 
 use iced::border::Radius;
 use iced::theme::Style;
-use iced::{Background, Border, Color, Length, Padding, Pixels, color};
+use iced::{Background, Border, Color, Font, Length, Padding, Pixels, color};
+
+pub mod font {
+    use super::*;
+
+    pub const FONT_MONO_BYTES: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/assets/JetBrainsMono-Regular.ttf"
+    ));
+    pub const MONO: Font = Font::with_name("JetBrains Mono");
+}
 
 pub mod color {
     use super::*;

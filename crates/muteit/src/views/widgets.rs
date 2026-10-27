@@ -11,7 +11,7 @@ use iced::{Background, Border, Color, Element, Font, Length, Padding};
 
 use crate::views::theme::{
     BACKGROUND, BORDER, HEIGHT, HEIGHT_PIXELS, HOVER_BORDER, PADDING, PRESSED_BORDER, TEXT_SM,
-    color,
+    color, font,
 };
 
 pub fn label<'a, Message, Theme, Renderer>(
@@ -128,7 +128,7 @@ where
 {
     use iced::widget::container::Style;
 
-    Container::new(Text::new(content).size(TEXT_SM).font(Font::MONOSPACE))
+    Container::new(Text::new(content).size(TEXT_SM).font(font::MONO))
         .style(|_| Style {
             background: Some(BACKGROUND),
             border: Border {

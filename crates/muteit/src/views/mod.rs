@@ -5,6 +5,7 @@
 mod widgets;
 
 mod theme;
+pub use theme::font::FONT_MONO_BYTES;
 pub use theme::style;
 
 pub mod device_selector;

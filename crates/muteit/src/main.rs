@@ -156,6 +156,7 @@ fn main() {
     .title(InfallibleApp::title)
     .style(InfallibleApp::style)
     .subscription(InfallibleApp::subscription)
+    .font(FONT_MONO_BYTES)
     .run()
     .unwrap();
 }
