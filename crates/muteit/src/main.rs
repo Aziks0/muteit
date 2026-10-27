@@ -9,15 +9,15 @@
 mod app;
 mod config;
 mod device_listener;
-mod device_selector;
 mod error;
-mod hotkey_binding;
 mod hotkey_manager;
 mod mute_listener;
-mod settings;
 mod tray;
 mod utils;
 mod windows;
+
+mod views;
+use views::*;
 
 use std::env::args;
 use std::hint;
