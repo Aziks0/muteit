@@ -64,7 +64,7 @@ pub mod __private {
 
     use crate::windows::Win32::{CreateMutexW, ERROR_ALREADY_EXISTS};
 
-    #[inline(always)]
+    #[inline]
     pub fn is_alone(unique: PCWSTR) -> Result<bool, String> {
         // We don't care about the returned handle. We just care about whether there is an error or not.
         // Windows won't destroy the mutex until we either call `CloseHandle` or the program exits.
