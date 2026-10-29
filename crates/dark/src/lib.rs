@@ -17,6 +17,8 @@
 #[cfg(not(target_os = "windows"))]
 compile_error!("This crate is only available on Windows.");
 
+mod windows;
+
 use std::mem;
 
 use windows_core::{PCSTR, w};
@@ -24,8 +26,6 @@ use windows_core::{PCSTR, w};
 use crate::windows::Win32::{
     FreeLibrary, GetProcAddress, LoadLibraryW, OSVERSIONINFOW, RtlGetVersion, STATUS_SUCCESS,
 };
-
-mod windows;
 
 fn is_dark_mode_available() -> bool {
     let mut version_info = OSVERSIONINFOW::default();
