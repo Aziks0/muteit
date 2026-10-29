@@ -31,7 +31,7 @@ version = "0.100.0"
 
 # Same version needed for all the iced crates.
 [workspace.dependencies.iced]
-version = "0.14.0-rc.0.1"
+version = "0.14.0-rc.0.2"
 default-features = false
 features = ["tiny-skia", "tokio"]
 
@@ -43,8 +43,8 @@ module_inception = "allow"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [patch.crates-io]
-iced = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
-iced_core = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.1" }
+iced = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.2" }
+iced_core = { git = "https://github.com/Aziks0/iced.git", tag = "v0.14.0-rc.0.2" }
 
 [profile.release]
 codegen-units = 1

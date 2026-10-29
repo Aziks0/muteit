@@ -527,7 +527,7 @@ version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab8ecd87370524b461f8557c119c405552c396ed91fc0a8eec68679eab26f94a"
 dependencies = [
- "libloading 0.8.9",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -1075,8 +1075,8 @@ dependencies = [
 
 [[package]]
 name = "iced"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1091,8 +1091,8 @@ dependencies = [
 
 [[package]]
 name = "iced_beacon"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "bincode 1.3.3",
  "futures",
@@ -1106,8 +1106,8 @@ dependencies = [
 
 [[package]]
 name = "iced_core"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",
@@ -1124,8 +1124,8 @@ dependencies = [
 
 [[package]]
 name = "iced_debug"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "cargo-hot-protocol",
  "iced_beacon",
@@ -1136,8 +1136,8 @@ dependencies = [
 
 [[package]]
 name = "iced_devtools"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_debug",
  "iced_program",
@@ -1147,8 +1147,8 @@ dependencies = [
 
 [[package]]
 name = "iced_futures"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "futures",
  "iced_core",
@@ -1161,8 +1161,8 @@ dependencies = [
 
 [[package]]
 name = "iced_graphics"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "bitflags 2.13.2",
  "bytemuck",
@@ -1179,8 +1179,8 @@ dependencies = [
 
 [[package]]
 name = "iced_program"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -1188,8 +1188,8 @@ dependencies = [
 
 [[package]]
 name = "iced_renderer"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1199,8 +1199,8 @@ dependencies = [
 
 [[package]]
 name = "iced_runtime"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "bytes",
  "iced_core",
@@ -1211,8 +1211,8 @@ dependencies = [
 
 [[package]]
 name = "iced_tiny_skia"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -1228,7 +1228,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.2"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_renderer",
  "log",
@@ -1240,8 +1240,8 @@ dependencies = [
 
 [[package]]
 name = "iced_winit"
-version = "0.14.0-rc.0.1"
-source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.1#2eece2992a063925e0dfa0a179a734f904a85139"
+version = "0.14.0-rc.0.2"
+source = "git+https://github.com/Aziks0/iced.git?tag=v0.14.0-rc.0.2#6bd021dce749ca64dcd6d0319f49f3d6ff6414b0"
 dependencies = [
  "iced_debug",
  "iced_program",
@@ -1746,7 +1746,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "680998035259dcfcafe653688bf2aa6d3e2dc05e98be6ab46afb089dc84f1df8"
 dependencies = [
- "proc-macro-crate 3.5.0",
+ "proc-macro-crate 1.3.1",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -2200,15 +2200,6 @@ checksum = "b00f26d3400549137f92511a46ac1cd8ce37cb5598a96d382381458b992a5d24"
 dependencies = [
  "toml_datetime 0.6.3",
  "toml_edit 0.20.2",
-]
-
-[[package]]
-name = "proc-macro-crate"
-version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e67ba7e9b2b56446f1d419b1d807906278ffa1a658a8a5d8a39dcb1f5a78614f"
-dependencies = [
- "toml_edit 0.25.13+spec-1.1.0",
 ]
 
 [[package]]
@@ -2920,15 +2911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_datetime"
-version = "1.1.1+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
 name = "toml_edit"
 version = "0.19.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2950,18 +2932,6 @@ dependencies = [
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.3",
  "winnow 0.5.40",
-]
-
-[[package]]
-name = "toml_edit"
-version = "0.25.13+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6975367e4d2ef766d86af01ffad14b622fecc8d4357a998fbc4deb6e9bacaf9b"
-dependencies = [
- "indexmap",
- "toml_datetime 1.1.1+spec-1.1.0",
- "toml_parser",
- "winnow 1.0.4",
 ]
 
 [[package]]
@@ -3533,9 +3503,6 @@ name = "winnow"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winresource"
