@@ -31,7 +31,7 @@ default = ["dev"]
 dev = ["iced/debug", "iced/hot"]
 
 [build-dependencies]
-minijinja = { workspace = true }
+minijinja = { workspace = true, features = ["serde"] }
 windows-bindgen = { workspace = true }
 
 image = { version = "0.25.9", default-features = false, features = [

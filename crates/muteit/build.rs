@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::{env, fs};
 
+use minijinja::value::Serde;
 use minijinja::{Environment, UndefinedBehavior};
 use toml::Table;
 use windows_bindgen::Bindgen;
@@ -74,7 +75,7 @@ fn set_resource(mut ctx: Context) {
         let mut env = Environment::empty();
         env.set_undefined_behavior(UndefinedBehavior::Strict);
         let resource = env
-            .render_str(&source, ctx)
+            .render_str(&source, Serde(&ctx))
             .expect("Resource template should be rendered.");
 
         let out_dir = env::var("OUT_DIR").unwrap();
