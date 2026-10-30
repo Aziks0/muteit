@@ -28,6 +28,8 @@ pub mod color {
     // oklch(21% 0.034 264.665)
     pub const GRAY_900: Color = color!(0x111827);
 
+    // neutral-700: oklch(37.1% 0 none)
+    pub const NEUTRAL_700: Color = color!(0x404040);
     // neutral-800: oklch(26.9% 0 none)
     pub const NEUTRAL_800: Color = color!(0x262626);
 

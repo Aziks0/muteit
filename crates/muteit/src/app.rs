@@ -11,6 +11,7 @@ use iced::{Element, Subscription, Task, window};
 
 use audio::enumerator::{DeviceEnumerator, Input};
 use audio::interface::audio_controller::AudioController;
+use autostart::AutoStarter;
 use hotkey::HotKeyEvent;
 
 use crate::config::AppConfig;
@@ -35,6 +36,7 @@ pub enum Message {
 
 pub struct App {
     config: AppConfig,
+    autostart: Rc<AutoStarter>,
     enumerator: utils::DeviceEnumerator<Input>,
     controller: Option<AudioController>,
     device_listener: DeviceListener,
@@ -47,6 +49,10 @@ pub struct App {
 impl App {
     pub fn boot() -> Result<(Self, Task<Message>)> {
         let config = AppConfig::load()?;
+
+        let autostart = AutoStarter!(with env!("NAME"), "--hidden")?;
+        #[cfg(not(feature = "dev"))]
+        autostart.correct()?;
 
         let mut hotkey_manager = HotKeyManager::try_new()?;
 
@@ -81,6 +87,7 @@ impl App {
         Ok((
             Self {
                 config,
+                autostart: Rc::new(autostart),
                 enumerator: Rc::new(RefCell::new(enumerator)),
                 controller,
                 device_listener,
@@ -199,6 +206,7 @@ impl App {
                             self.enumerator.clone(),
                             self.config.device.clone(),
                             self.config.hotkey.clone(),
+                            self.autostart.clone(),
                         )?,
                     ));
 
@@ -258,6 +266,7 @@ impl App {
                         }
                         hotkey_binding::Action::None => Task::none(),
                     },
+                    settings::Action::None => Task::none(),
                 }
             }
         })

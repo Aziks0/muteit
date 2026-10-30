@@ -4,8 +4,6 @@
 
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
-// mod autostart;
-// mod device;
 mod app;
 mod config;
 mod device_listener;

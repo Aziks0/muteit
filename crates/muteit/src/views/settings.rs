@@ -2,12 +2,16 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::rc::Rc;
+
 use anyhow::Result;
 use iced::widget::{column, container, responsive};
 use iced::{Element, Length, Padding, Subscription};
 
 use audio::enumerator::Input;
+use autostart::AutoStarter;
 
+use crate::autostart::AutoStart;
 use crate::config::{DeviceInfo, HotkeyInfo};
 use crate::device_selector::{self, DeviceSelector};
 use crate::hotkey_binding::{self, HotkeyBinding};
@@ -19,15 +23,18 @@ pub enum Action {
     DeviceSelector(device_selector::Action),
     /// See [`hotkey_binding::Action`].
     HotKeyBinding(hotkey_binding::Action),
+    /// Nothing to do.
+    None,
 }
 
-/// Message for the tray icon.
+/// Message for the settings.
 ///
 /// See [`Settings::update`].
 #[derive(Debug)]
 pub enum Message {
     DeviceSelector(device_selector::Message),
     HotkeyBinding(hotkey_binding::Message),
+    AutoStart(crate::autostart::Message),
 }
 
 /// Container for the settings window widgets.
@@ -36,6 +43,7 @@ pub enum Message {
 pub struct Settings {
     device_selector: DeviceSelector<Input>,
     hotkey_binding: HotkeyBinding,
+    autostart: AutoStart,
 }
 
 impl Settings {
@@ -44,10 +52,12 @@ impl Settings {
         enumerator: DeviceEnumerator<Input>,
         device_info: Option<DeviceInfo>,
         hotkey_info: Option<HotkeyInfo>,
+        autostart: Rc<AutoStarter>,
     ) -> Result<Self> {
         Ok(Self {
             device_selector: DeviceSelector::try_new(enumerator, device_info)?,
             hotkey_binding: HotkeyBinding::new(hotkey_info),
+            autostart: AutoStart::try_new(autostart)?,
         })
     }
 
@@ -63,6 +73,11 @@ impl Settings {
                 let action = self.hotkey_binding.update(message);
 
                 Action::HotKeyBinding(action)
+            }
+            Message::AutoStart(message) => {
+                self.autostart.update(message)?;
+
+                Action::None
             }
         })
     }
@@ -89,7 +104,8 @@ impl Settings {
             container(
                 column![
                     self.device_selector.view().map(Message::DeviceSelector),
-                    self.hotkey_binding.view().map(Message::HotkeyBinding)
+                    self.hotkey_binding.view().map(Message::HotkeyBinding),
+                    self.autostart.view().map(Message::AutoStart)
                 ]
                 .spacing(8)
                 .width(Length::Fill),

@@ -6,7 +6,7 @@ use std::borrow::Borrow;
 
 use iced::font::Weight;
 use iced::widget::text::LineHeight;
-use iced::widget::{Button, Container, PickList, Text};
+use iced::widget::{Button, Column, Container, PickList, Space, Text, Toggler, column, row};
 use iced::{Background, Border, Color, Element, Font, Length, Padding};
 
 use crate::views::theme::{
@@ -64,6 +64,89 @@ where
         })
         .height(HEIGHT)
         .padding(PADDING)
+}
+
+pub fn toggler<'a, Message, Theme, Renderer>(
+    is_toggled: bool,
+) -> Toggler<'a, Message, Theme, Renderer>
+where
+    Theme: iced::widget::toggler::Catalog,
+    Renderer: iced::advanced::text::Renderer,
+    <Theme as iced::widget::toggler::Catalog>::Class<'a>:
+        From<iced::widget::toggler::StyleFn<'a, Theme>>,
+{
+    use iced::widget::toggler::{Status, Style};
+
+    #[inline]
+    const fn style(is_toggled: bool, is_hovered: bool) -> Style {
+        let foreground_color = if is_toggled {
+            color::TEXT
+        } else {
+            color::NEUTRAL_700
+        };
+
+        let background_border_color = if is_hovered {
+            HOVER_BORDER.color
+        } else {
+            BORDER.color
+        };
+
+        Style {
+            foreground: Background::Color(foreground_color),
+            foreground_border_color: foreground_color,
+            foreground_border_width: 0.,
+            background: BACKGROUND,
+            background_border_color,
+            background_border_width: BORDER.width,
+            padding_ratio: 0.15,
+            border_radius: None,
+            text_color: None,
+        }
+    }
+
+    Toggler::new(is_toggled)
+        .style(|_, status| match status {
+            Status::Active { is_toggled } | Status::Disabled { is_toggled } => {
+                style(is_toggled, false)
+            }
+            Status::Hovered { is_toggled } => style(is_toggled, true),
+        })
+        .size(HEIGHT_PIXELS.0 - 4.)
+}
+
+pub fn option<'a, Message, Theme, Renderer>(
+    label: &'a str,
+    is_toggled: bool,
+    on_toggle: impl Fn(bool) -> Message + 'a,
+) -> Column<'a, Message, Theme, Renderer>
+where
+    Message: 'a,
+    Theme: iced::widget::text::Catalog
+        + iced::widget::container::Catalog
+        + iced::widget::toggler::Catalog
+        + 'a,
+    Renderer: iced::advanced::text::Renderer + 'a,
+    <Renderer as iced::advanced::text::Renderer>::Font: From<iced::Font>,
+    <Theme as iced::widget::text::Catalog>::Class<'a>: From<iced::widget::text::StyleFn<'a, Theme>>,
+    <Theme as iced::widget::toggler::Catalog>::Class<'a>:
+        From<iced::widget::toggler::StyleFn<'a, Theme>>,
+{
+    column![
+        Space::new().height(10.),
+        row![
+            Text::new(label)
+                .font(Font {
+                    weight: Weight::Bold,
+                    ..Default::default()
+                })
+                .color(color::TEXT)
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .align_y(iced::Alignment::Center),
+            Container::new(toggler(is_toggled).on_toggle(on_toggle)).center_y(Length::Fill)
+        ]
+        .height(HEIGHT)
+    ]
 }
 
 pub fn pick_list<'a, T, L, V, Message, Theme, Renderer>(
