@@ -64,7 +64,7 @@ impl InfallibleApp {
     }
 
     fn title(&self, _window_id: window::Id) -> String {
-        String::from("muteit!")
+        String::from(env!("NAME"))
     }
 
     fn style(&self, _theme: &Theme) -> Style {
