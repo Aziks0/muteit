@@ -40,6 +40,12 @@ pub struct AutoStart {
 /// let autostart = AutoStart!(with "MyApp")?;
 /// let autostart = AutoStart!(with "MyApp", "--hidden")?;
 /// let autostart = AutoStart!(with "MyApp", "--hidden", "--silent")?;
+///
+/// // In all cases, you can also use expressions.
+/// let name = "MyApp";
+/// let arg = "--hidden";
+/// let autostart = AutoStart!(arg)?;
+/// let autostart = AutoStart!(with name, arg)?;
 /// # Ok::<(), Error>(())
 /// ```
 #[macro_export]
@@ -47,10 +53,10 @@ macro_rules! AutoStart {
     () => {
         $crate::AutoStart::new::<_, &str>(Some(env!("CARGO_BIN_NAME")), None)
     };
-    ($($arg:literal),+) => {
+    ($($arg:expr),+) => {
         $crate::AutoStart::new(Some(env!("CARGO_BIN_NAME")), Some(&[$($arg),+]))
     };
-    (with $name:literal$(, $arg:literal)*) => {
+    (with $name:expr$(, $arg:expr)*) => {
         $crate::AutoStart::new::<_, &str>(Some($name), Some(&[$($arg),*]))
     };
 }
