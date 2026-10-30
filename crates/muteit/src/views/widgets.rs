@@ -35,7 +35,7 @@ pub fn button<'a, Message, Theme, Renderer>(
 where
     Message: 'a,
     Theme: iced::widget::button::Catalog + iced::widget::text::Catalog + 'a,
-    Renderer: iced::advanced::Renderer + iced::advanced::text::Renderer + 'a,
+    Renderer: iced::advanced::text::Renderer + 'a,
     <Theme as iced::widget::button::Catalog>::Class<'a>:
         From<iced::widget::button::StyleFn<'a, Theme>>,
 {
