@@ -203,6 +203,14 @@ impl AutoStarter {
         self.is_set_strict_with_autocorrect_optional(true)
     }
 
+    /// If the program will open on startup, correct the path and args if they do not match.
+    #[inline]
+    pub fn correct(&self) -> Result<()> {
+        let _ = self.is_set_strict_with_autocorrect_optional(true)?;
+
+        Ok(())
+    }
+
     /// Set if the program should open on startup.
     pub fn set(&self, should_open: bool) -> Result<()> {
         unsafe {
