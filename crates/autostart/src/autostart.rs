@@ -15,12 +15,12 @@ use crate::{Error, Result};
 
 const SUB_KEY_PATH: PCWSTR = w!(r"Software\Microsoft\Windows\CurrentVersion\Run");
 
-pub struct AutoStart {
+pub struct AutoStarter {
     app_name: HSTRING,
     command: HSTRING,
 }
 
-/// Construct a new [`AutoStart`].
+/// Construct a new [`AutoStarter`].
 ///
 /// This macro accepts a different number of patterns:
 ///
@@ -28,46 +28,46 @@ pub struct AutoStart {
 /// # use autostart::*;
 /// // With no argument, the app name will be the environment variable `CARGO_BIN_NAME`
 /// // (i.e. the name of the binary currently being compiled), and there will be no args.
-/// let autostart = AutoStart!()?;
+/// let autostart = AutoStarter!()?;
 ///
 /// // With one or more string literal, the app name will be the same as without argument, and the
 /// // literal(s) will be passed as args.
-/// let autostart = AutoStart!("--hidden")?;
-/// let autostart = AutoStart!("--hidden", "--silent")?;
+/// let autostart = AutoStarter!("--hidden")?;
+/// let autostart = AutoStarter!("--hidden", "--silent")?;
 ///
 /// // With the `with` keyword, the app name will be the first string literal, and the args the
 /// // subsequent string literal(s).
-/// let autostart = AutoStart!(with "MyApp")?;
-/// let autostart = AutoStart!(with "MyApp", "--hidden")?;
-/// let autostart = AutoStart!(with "MyApp", "--hidden", "--silent")?;
+/// let autostart = AutoStarter!(with "MyApp")?;
+/// let autostart = AutoStarter!(with "MyApp", "--hidden")?;
+/// let autostart = AutoStarter!(with "MyApp", "--hidden", "--silent")?;
 ///
 /// // In all cases, you can also use expressions.
 /// let name = "MyApp";
 /// let arg = "--hidden";
-/// let autostart = AutoStart!(arg)?;
-/// let autostart = AutoStart!(with name, arg)?;
+/// let autostart = AutoStarter!(arg)?;
+/// let autostart = AutoStarter!(with name, arg)?;
 /// # Ok::<(), Error>(())
 /// ```
 #[macro_export]
-macro_rules! AutoStart {
+macro_rules! AutoStarter {
     () => {
-        $crate::AutoStart::new::<_, &str>(Some(env!("CARGO_BIN_NAME")), None)
+        $crate::AutoStarter::new::<_, &str>(Some(env!("CARGO_BIN_NAME")), None)
     };
     ($($arg:expr),+) => {
-        $crate::AutoStart::new(Some(env!("CARGO_BIN_NAME")), Some(&[$($arg),+]))
+        $crate::AutoStarter::new(Some(env!("CARGO_BIN_NAME")), Some(&[$($arg),+]))
     };
     (with $name:expr$(, $arg:expr)*) => {
-        $crate::AutoStart::new::<_, &str>(Some($name), Some(&[$($arg),*]))
+        $crate::AutoStarter::new::<_, &str>(Some($name), Some(&[$($arg),*]))
     };
 }
 
-impl AutoStart {
-    /// Construct a new [`AutoStart`].
+impl AutoStarter {
+    /// Construct a new [`AutoStarter`].
     ///
     /// If `app_name` is `None`, the app name will be the _runtime_ executable name without the
     /// `.exe`.
     ///
-    /// See also the [`AutoStart!`](AutoStart!) macro.
+    /// See also the [`AutoStarter!`](AutoStarter!) macro.
     pub fn new<Name: AsRef<str>, Arg: AsRef<OsStr>>(
         app_name: Option<Name>,
         args: Option<&[Arg]>,
@@ -183,7 +183,7 @@ impl AutoStart {
 
     /// Check if the program will open on startup.
     ///
-    /// The path and args will be checked as well. If they do not match the current `AutoStart`,
+    /// The path and args will be checked as well. If they do not match the current `AutoStarter`,
     /// this method will return `false`.
     ///
     /// See also [`is_set`](Self::is_set) and [`is_set_autocorrect`](Self::is_set_autocorrect).
@@ -194,7 +194,7 @@ impl AutoStart {
 
     /// Check if the program will open on startup.
     ///
-    /// The path and args will be checked as well. If they do not match the current `AutoStart`,
+    /// The path and args will be checked as well. If they do not match the current `AutoStarter`,
     /// this method will correct the error and return `true`.
     ///
     /// See also [`is_set`](Self::is_set) and [`is_set_strict`](Self::is_set_strict).
