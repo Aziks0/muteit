@@ -9,7 +9,9 @@ use iced::font::Weight;
 use iced::keyboard::key::{Code, NativeCode, Physical as IcedPhysicalKey};
 use iced::keyboard::{Key, Modifiers as IcedModifiers};
 use iced::widget::{column, container, row, space, text};
-use iced::{Background, Border, Color, Element, Font, Length, Padding, Subscription, keyboard};
+use iced::{
+    Background, Border, Color, Element, Font, Length, Padding, Subscription, Vector, keyboard,
+};
 use smol_str::{SmolStr, StrExt, format_smolstr};
 
 use hotkey::{HotKey, Modifiers};
@@ -19,7 +21,7 @@ use crate::utils;
 use crate::views::theme::{
     BORDER, BORDER_RADIUS, HEIGHT, HOVER_BORDER, PADDING, PRESSED_BORDER, color,
 };
-use crate::views::widgets::{button, kbd, label};
+use crate::views::widgets::{absolute, button, kbd, label};
 
 /// Error when trying to get a bind for a hotkey.
 ///
@@ -419,7 +421,7 @@ impl HotkeyBinding {
 
         column![
             label("Hotkey"),
-            column![
+            absolute(
                 row![
                     self.binder().on_press(Message::StartBinding),
                     button("Unbind").on_press(Message::Unbind)
@@ -427,9 +429,8 @@ impl HotkeyBinding {
                 .spacing(4)
                 .width(Length::Fill),
                 error_message
-            ]
-            .spacing(-2.)
-            .width(Length::Fill)
+            )
+            .position(absolute::RelativePosition::BottomLeft(Vector::new(0., -2.)))
         ]
         .width(Length::Fill)
         .into()

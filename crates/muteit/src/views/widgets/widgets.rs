@@ -13,6 +13,7 @@ use crate::views::theme::{
     BACKGROUND, BORDER, HEIGHT, HEIGHT_PIXELS, HOVER_BORDER, PADDING, PRESSED_BORDER, TEXT_SM,
     color, font,
 };
+use crate::views::widgets::absolute::Absolute;
 
 pub fn label<'a, Message, Theme, Renderer>(
     content: &'a str,
@@ -225,4 +226,14 @@ where
         .center_y(Length::Fill)
         .padding(Padding::default().horizontal(10))
         .into()
+}
+
+pub fn absolute<'a, Message, Theme, Renderer>(
+    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+    absolute_content: impl Into<Element<'a, Message, Theme, Renderer>>,
+) -> Absolute<'a, Message, Theme, Renderer>
+where
+    Renderer: iced::advanced::Renderer,
+{
+    Absolute::new(content, absolute_content)
 }
