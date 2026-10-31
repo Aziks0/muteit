@@ -24,9 +24,9 @@ bitflags! {
         const WIN = MOD_WIN as _;
         /// The `Control` modifier.
         const CTRL = MOD_CONTROL as _;
-        /// The `Alt` modifier.
-        const ALT = MOD_ALT as _;
         /// The `Shift` modifier.
         const SHIFT = MOD_SHIFT as _;
+        /// The `Alt` modifier.
+        const ALT = MOD_ALT as _;
     }
 }
