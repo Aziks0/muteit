@@ -123,7 +123,7 @@ end;
 procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
   { Make sure the next setup will be considered an update. }
-  SetPreviousData(PreviousDataKey, 'Exist', '1');
+  SetPreviousData(PreviousDataKey, 'Version', '{{ VERSION }}');
 end;
 
 function InitializeSetup(): Boolean;
@@ -131,7 +131,7 @@ begin
   { We can't call `GetPreviousData` in `GetExecutableRunParameters` because it gets called in the }
   { `Run` section, which happens after `RegisterPreviousData` is called, so the value is obviously }
   { already registered. }
-  IsUpdating := SameText(GetPreviousData('Exist', ''), '1');
+  IsUpdating := not SameText(GetPreviousData('Version', ''), '');
 
   Result := True;
 end;
