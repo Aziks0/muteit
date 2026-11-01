@@ -18,3 +18,6 @@ minijinja = { workspace = true }
 windows-bindgen = { workspace = true }
 
 regex = "1.11.3"
+
+[lints]
+workspace = true

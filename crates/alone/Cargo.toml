@@ -23,3 +23,6 @@ windows-bindgen = { workspace = true }
 
 [dev-dependencies]
 alone = { path = ".", features = ["__test"] }
+
+[lints]
+workspace = true

@@ -21,3 +21,6 @@ windows-bindgen = { workspace = true }
 
 [dev-dependencies]
 autostart = { path = ".", features = ["__test"] }
+
+[lints]
+workspace = true
