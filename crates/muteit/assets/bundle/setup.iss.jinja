@@ -100,6 +100,9 @@ Filename: "{{ '{#InstalledExePath}' }}"; \
   Parameters: "{code:GetExecutableRunParameters}"; \
   Flags: nowait
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{localappdata}\{{ NAME }}"
+
 [Code]
 function GetShortcutParameters(Param: String): String;
 begin
