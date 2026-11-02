@@ -129,7 +129,7 @@ impl AppConfig {
 
             // Skip deserializing if the file is empty.
             if bytes != 0 {
-                toml::from_str(&buf).context("Parsing config file.")?
+                toml::from_str(&buf).unwrap_or_default()
             } else {
                 AppConfig::default()
             }
