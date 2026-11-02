@@ -23,7 +23,6 @@ Add a mute icon to your system tray.
 ## Requirements
 
 - Windows 10+
-- WebView2 _(pre-installed on Windows, but the setup installs it if needed)_
 
 ## Download
 
