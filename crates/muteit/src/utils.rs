@@ -66,6 +66,7 @@ where
     static DEFAULT_WINDOW_SETTINGS: LazyLock<window::Settings> =
         LazyLock::new(|| window::Settings {
             size: Size::new(800., 230.),
+            position: window::Position::Centered,
             platform_specific: PlatformSpecific {
                 drag_and_drop: false,
                 icon: Some(get_small_icon()),
