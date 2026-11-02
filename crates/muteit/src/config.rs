@@ -56,11 +56,10 @@ impl AppConfig {
                 .context("`LOCALAPPDATA` environment variable is not set.")?;
             config_dir.push(appdata);
 
-            let config_dir_name = if cfg!(feature = "dev") {
-                "muteit!-dev"
-            } else {
-                "muteit!"
-            };
+            let config_dir_name = env!("NAME");
+            #[cfg(feature = "dev")]
+            let config_dir_name = format!("{}-dev", config_dir_name);
+
             config_dir.push(config_dir_name);
 
             config_dir
