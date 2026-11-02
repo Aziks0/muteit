@@ -20,18 +20,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        # v6.0.2
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
       - name: Install Bun
-        # v2.1.2
-        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3
+        # v2.2.0
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup envs
@@ -39,15 +39,15 @@ jobs:
           bun run .github/scripts/get_envs.ts
           | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@693c0353146ccbad39f1109436e0dca2f7e42185
+        uses: cargo-bins/cargo-binstall@851112458b5f28a29e5bc14a690c3f283d9dcc6f
       - name: Install cargo-about
         run: cargo binstall cargo-about@${{ env.CARGO_ABOUT_VERSION }}
       - name: Run bundle script
         run: bun run scripts/bundle.ts
       - name: Create release
         if: ${{ !env.ACT }}
-        # v3.0.2
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
+        # v3.0.3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           draft: true
           make_latest: true
