@@ -35,7 +35,7 @@ Right click on the tray icon and click on `Settings` to open the settings window
 > [!NOTE]
 > The settings file is located at `%LOCALAPPDATA/muteit!/config.toml`.
 >
-> If your using the single executable, a directory is still created at `%LOCALAPPDATA%/muteit!`.
+> If your using the single executable, the settings file is still located at this path.
 
 ## Licensing
 
