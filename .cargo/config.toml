@@ -3,5 +3,10 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [target.x86_64-pc-windows-msvc]
-# Remove the need for `vcruntime140.dll`.
-rustflags = ["-Ctarget-feature=+crt-static"]
+rustflags = [
+  # Remove the need for `vcruntime140.dll`.
+  "-Ctarget-feature=+crt-static",
+  # This enables `avx`, `avx2` and `sse4.1` which are used by `tiny-skia`. It's
+  # supposed to target cpus from 2013 and onward.
+  "-Ctarget-cpu=x86-64-v3",
+]
