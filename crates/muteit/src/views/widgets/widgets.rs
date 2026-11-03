@@ -10,8 +10,8 @@ use iced::widget::{Button, Column, Container, PickList, Space, Text, Toggler, co
 use iced::{Background, Border, Color, Element, Font, Length, Padding};
 
 use crate::views::theme::{
-    BACKGROUND, BORDER, HEIGHT, HEIGHT_PIXELS, HOVER_BORDER, PADDING, PRESSED_BORDER, TEXT_SM,
-    color, font,
+    BACKGROUND, BORDER, HEIGHT, HEIGHT_PIXELS, HOVER_BORDER, PADDING, PRESSED_BORDER, SHADOW,
+    TEXT_SM, color, font,
 };
 use crate::views::widgets::absolute::Absolute;
 
@@ -48,18 +48,21 @@ where
                 background: Some(BACKGROUND),
                 text_color: color::TEXT,
                 border: BORDER,
+                shadow: SHADOW,
                 ..Default::default()
             },
             Status::Hovered => Style {
                 background: Some(BACKGROUND),
                 text_color: color::TEXT,
                 border: HOVER_BORDER,
+                shadow: SHADOW,
                 ..Default::default()
             },
             Status::Pressed => Style {
                 background: Some(BACKGROUND),
                 text_color: color::TEXT,
                 border: PRESSED_BORDER,
+                shadow: SHADOW,
                 ..Default::default()
             },
         })
@@ -182,7 +185,7 @@ where
                     placeholder_color: color::TEXT,
                     text_color: color::TEXT,
                     border: BORDER,
-                    shadow: Default::default(),
+                    shadow: SHADOW,
                 },
                 Status::Hovered | Status::Opened { is_hovered: true } => Style {
                     background: BACKGROUND,
@@ -190,15 +193,15 @@ where
                     placeholder_color: color::TEXT,
                     text_color: color::TEXT,
                     border: HOVER_BORDER,
-                    shadow: Default::default(),
+                    shadow: SHADOW,
                 },
             })
             .menu_style(|_| menu::Style {
-                background: Background::Color(color::GRAY_800),
-                selected_background: Background::Color(color::GRAY_700),
+                background: Background::Color(color::NEUTRAL_850),
+                selected_background: Background::Color(color::NEUTRAL_750),
                 selected_text_color: color::TEXT,
                 text_color: color::TEXT,
-                border: BORDER.color(Color::BLACK),
+                border: BORDER.color(color::NEUTRAL_900),
                 shadow: Default::default(),
             })
             .width(Length::Fill)
@@ -216,7 +219,7 @@ where
 
     Container::new(Text::new(content).size(TEXT_SM).font(font::MONO))
         .style(|_| Style {
-            background: Some(BACKGROUND),
+            background: Some(Background::Color(Color::BLACK)),
             border: Border {
                 color: color::GRAY_600,
                 width: 1.2,

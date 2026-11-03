@@ -4,7 +4,7 @@
 
 use iced::border::Radius;
 use iced::theme::Style;
-use iced::{Background, Border, Color, Font, Length, Padding, Pixels, color};
+use iced::{Background, Border, Color, Font, Length, Padding, Pixels, Shadow, Vector, color};
 
 pub mod font {
     use super::*;
@@ -21,17 +21,13 @@ pub mod color {
 
     // oklch(44.6% 0.03 256.802)
     pub const GRAY_600: Color = color!(0x4b5563);
-    // oklch(37.3% 0.034 259.733)
-    pub const GRAY_700: Color = color!(0x374151);
-    // oklch(27.8% 0.033 256.848)
-    pub const GRAY_800: Color = color!(0x1f2937);
-    // oklch(21% 0.034 264.665)
-    pub const GRAY_900: Color = color!(0x111827);
 
-    // neutral-700: oklch(37.1% 0 none)
+    // Those are based on tailwind but have been tweaked.
     pub const NEUTRAL_700: Color = color!(0x404040);
-    // neutral-800: oklch(26.9% 0 none)
+    pub const NEUTRAL_750: Color = color!(0x333333);
     pub const NEUTRAL_800: Color = color!(0x262626);
+    pub const NEUTRAL_850: Color = color!(0x222222);
+    pub const NEUTRAL_900: Color = color!(0x1b1b1b);
 
     pub const DANGER: Color = color!(0xe7000b);
 
@@ -50,7 +46,7 @@ pub const PADDING: Padding = Padding {
     bottom: 0.,
 };
 
-pub const BACKGROUND: Background = Background::Color(Color::BLACK);
+pub const BACKGROUND: Background = Background::Color(color::NEUTRAL_750);
 
 pub const BORDER_RADIUS: Radius = Radius {
     bottom_left: 6.,
@@ -59,19 +55,25 @@ pub const BORDER_RADIUS: Radius = Radius {
     top_right: 6.,
 };
 pub const BORDER: Border = Border {
-    color: color::GRAY_900,
+    color: Color::TRANSPARENT,
     radius: BORDER_RADIUS,
     width: 2.,
 };
 pub const HOVER_BORDER: Border = Border {
-    color: color::GRAY_700,
+    color: color::NEUTRAL_700,
     radius: BORDER_RADIUS,
     width: 2.,
 };
 pub const PRESSED_BORDER: Border = Border {
-    color: color::GRAY_700,
+    color: color::NEUTRAL_700,
     radius: BORDER_RADIUS,
     width: 3.,
+};
+
+pub const SHADOW: Shadow = Shadow {
+    color: color::NEUTRAL_850,
+    blur_radius: 2.,
+    offset: Vector::new(2., 2.),
 };
 
 #[inline(always)]

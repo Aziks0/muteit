@@ -19,7 +19,7 @@ use hotkey::{HotKey, Modifiers};
 use crate::config::HotkeyInfo;
 use crate::utils;
 use crate::views::theme::{
-    BORDER, BORDER_RADIUS, HEIGHT, HOVER_BORDER, PADDING, PRESSED_BORDER, color,
+    BACKGROUND, BORDER, BORDER_RADIUS, HEIGHT, HOVER_BORDER, PADDING, PRESSED_BORDER, SHADOW, color,
 };
 use crate::views::widgets::{absolute, button, kbd, label};
 
@@ -346,47 +346,50 @@ impl HotkeyBinding {
 
         iced::widget::button(content)
             .style(|_, status| {
-                let background = Some(Background::Color(Color::TRANSPARENT));
-
                 if self.error.is_some() {
                     return Style {
-                        background,
+                        background: Some(BACKGROUND),
                         text_color: color::TEXT,
                         border: Border {
                             color: color::DANGER,
                             radius: BORDER_RADIUS.bottom_left(0),
                             ..BORDER
                         },
+                        shadow: SHADOW,
                         ..Default::default()
                     };
                 }
 
                 if self.is_binding {
                     return Style {
-                        background,
+                        background: Some(BACKGROUND),
                         text_color: color::TEXT,
                         border: BORDER.color(Color::WHITE),
+                        shadow: SHADOW,
                         ..Default::default()
                     };
                 }
 
                 match status {
                     Status::Active | Status::Disabled => Style {
-                        background,
+                        background: Some(BACKGROUND),
                         text_color: color::TEXT,
                         border: BORDER,
+                        shadow: SHADOW,
                         ..Default::default()
                     },
                     Status::Hovered => Style {
-                        background,
+                        background: Some(BACKGROUND),
                         text_color: color::TEXT,
                         border: HOVER_BORDER,
+                        shadow: SHADOW,
                         ..Default::default()
                     },
                     Status::Pressed => Style {
-                        background,
+                        background: Some(BACKGROUND),
                         text_color: color::TEXT,
                         border: PRESSED_BORDER,
+                        shadow: SHADOW,
                         ..Default::default()
                     },
                 }
