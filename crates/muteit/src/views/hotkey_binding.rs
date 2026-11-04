@@ -346,52 +346,24 @@ impl HotkeyBinding {
 
         iced::widget::button(content)
             .style(|_, status| {
-                if self.error.is_some() {
-                    return Style {
-                        background: Some(BACKGROUND),
-                        text_color: color::TEXT,
-                        border: Border {
-                            color: color::DANGER,
-                            radius: BORDER_RADIUS.bottom_left(0),
-                            ..BORDER
-                        },
-                        shadow: SHADOW,
-                        ..Default::default()
-                    };
-                }
+                let border = match status {
+                    _ if self.error.is_some() => Border {
+                        color: color::DANGER,
+                        radius: BORDER_RADIUS.bottom_left(0),
+                        ..BORDER
+                    },
+                    _ if self.is_binding => BORDER.color(Color::WHITE),
+                    Status::Active | Status::Disabled => BORDER,
+                    Status::Hovered => HOVER_BORDER,
+                    Status::Pressed => PRESSED_BORDER,
+                };
 
-                if self.is_binding {
-                    return Style {
-                        background: Some(BACKGROUND),
-                        text_color: color::TEXT,
-                        border: BORDER.color(Color::WHITE),
-                        shadow: SHADOW,
-                        ..Default::default()
-                    };
-                }
-
-                match status {
-                    Status::Active | Status::Disabled => Style {
-                        background: Some(BACKGROUND),
-                        text_color: color::TEXT,
-                        border: BORDER,
-                        shadow: SHADOW,
-                        ..Default::default()
-                    },
-                    Status::Hovered => Style {
-                        background: Some(BACKGROUND),
-                        text_color: color::TEXT,
-                        border: HOVER_BORDER,
-                        shadow: SHADOW,
-                        ..Default::default()
-                    },
-                    Status::Pressed => Style {
-                        background: Some(BACKGROUND),
-                        text_color: color::TEXT,
-                        border: PRESSED_BORDER,
-                        shadow: SHADOW,
-                        ..Default::default()
-                    },
+                Style {
+                    background: Some(BACKGROUND),
+                    text_color: color::TEXT,
+                    shadow: SHADOW,
+                    border,
+                    ..Default::default()
                 }
             })
             .width(Length::Fill)

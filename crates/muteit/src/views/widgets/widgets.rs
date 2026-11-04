@@ -43,28 +43,20 @@ where
     use iced::widget::button::{Status, Style};
 
     Button::new(Text::new(content).height(Length::Fill).center())
-        .style(|_, status| match status {
-            Status::Active | Status::Disabled => Style {
+        .style(|_, status| {
+            let border = match status {
+                Status::Active | Status::Disabled => BORDER,
+                Status::Hovered => HOVER_BORDER,
+                Status::Pressed => PRESSED_BORDER,
+            };
+
+            Style {
                 background: Some(BACKGROUND),
                 text_color: color::TEXT,
-                border: BORDER,
                 shadow: SHADOW,
+                border,
                 ..Default::default()
-            },
-            Status::Hovered => Style {
-                background: Some(BACKGROUND),
-                text_color: color::TEXT,
-                border: HOVER_BORDER,
-                shadow: SHADOW,
-                ..Default::default()
-            },
-            Status::Pressed => Style {
-                background: Some(BACKGROUND),
-                text_color: color::TEXT,
-                border: PRESSED_BORDER,
-                shadow: SHADOW,
-                ..Default::default()
-            },
+            }
         })
         .height(HEIGHT)
         .padding(PADDING)
@@ -178,23 +170,20 @@ where
 
     Container::new(
         PickList::new(options, selected, on_selected)
-            .style(|_, status| match status {
-                Status::Active | Status::Opened { is_hovered: false } => Style {
+            .style(|_, status| {
+                let border = match status {
+                    Status::Active | Status::Opened { is_hovered: false } => BORDER,
+                    Status::Hovered | Status::Opened { is_hovered: true } => HOVER_BORDER,
+                };
+
+                Style {
                     background: BACKGROUND,
                     handle_color: color::TEXT,
                     placeholder_color: color::TEXT,
                     text_color: color::TEXT,
-                    border: BORDER,
                     shadow: SHADOW,
-                },
-                Status::Hovered | Status::Opened { is_hovered: true } => Style {
-                    background: BACKGROUND,
-                    handle_color: color::TEXT,
-                    placeholder_color: color::TEXT,
-                    text_color: color::TEXT,
-                    border: HOVER_BORDER,
-                    shadow: SHADOW,
-                },
+                    border,
+                }
             })
             .menu_style(|_| menu::Style {
                 background: Background::Color(color::NEUTRAL_850),
