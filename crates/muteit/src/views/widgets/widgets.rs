@@ -182,6 +182,7 @@ where
                     placeholder_color: color::TEXT,
                     text_color: color::TEXT,
                     border: BORDER,
+                    shadow: Default::default(),
                 },
                 Status::Hovered | Status::Opened { is_hovered: true } => Style {
                     background: BACKGROUND,
@@ -189,6 +190,7 @@ where
                     placeholder_color: color::TEXT,
                     text_color: color::TEXT,
                     border: HOVER_BORDER,
+                    shadow: Default::default(),
                 },
             })
             .menu_style(|_| menu::Style {
