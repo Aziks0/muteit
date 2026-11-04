@@ -29,6 +29,12 @@ pub mod color {
     pub const NEUTRAL_850: Color = color!(0x222222);
     pub const NEUTRAL_900: Color = color!(0x1b1b1b);
 
+    pub const PRIMARY_WEAK: Color = NEUTRAL_700;
+    pub const PRIMARY: Color = NEUTRAL_750;
+    pub const PRIMARY_STRONG: Color = NEUTRAL_800;
+    pub const SECONDARY: Color = NEUTRAL_850;
+    pub const SECONDARY_STRONG: Color = NEUTRAL_900;
+
     pub const DANGER: Color = color!(0xe7000b);
 
     pub const TEXT: Color = Color::WHITE;
@@ -46,7 +52,7 @@ pub const PADDING: Padding = Padding {
     bottom: 0.,
 };
 
-pub const BACKGROUND: Background = Background::Color(color::NEUTRAL_750);
+pub const BACKGROUND: Background = Background::Color(color::PRIMARY);
 
 pub const BORDER_RADIUS: Radius = Radius {
     bottom_left: 6.,
@@ -60,18 +66,18 @@ pub const BORDER: Border = Border {
     width: 2.,
 };
 pub const HOVER_BORDER: Border = Border {
-    color: color::NEUTRAL_700,
+    color: color::PRIMARY_WEAK,
     radius: BORDER_RADIUS,
     width: 2.,
 };
 pub const PRESSED_BORDER: Border = Border {
-    color: color::NEUTRAL_700,
+    color: color::PRIMARY_WEAK,
     radius: BORDER_RADIUS,
     width: 3.,
 };
 
 pub const SHADOW: Shadow = Shadow {
-    color: color::NEUTRAL_850,
+    color: color::SECONDARY,
     blur_radius: 2.,
     offset: Vector::new(2., 2.),
 };
@@ -79,7 +85,7 @@ pub const SHADOW: Shadow = Shadow {
 #[inline(always)]
 pub fn style() -> Style {
     Style {
-        background_color: color::NEUTRAL_800,
+        background_color: color::PRIMARY_STRONG,
         text_color: color::TEXT,
     }
 }

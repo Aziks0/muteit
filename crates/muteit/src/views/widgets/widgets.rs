@@ -78,7 +78,7 @@ where
         let foreground_color = if is_toggled {
             color::TEXT
         } else {
-            color::NEUTRAL_700
+            color::PRIMARY_WEAK
         };
 
         let background_border_color = if is_hovered {
@@ -186,11 +186,11 @@ where
                 }
             })
             .menu_style(|_| menu::Style {
-                background: Background::Color(color::NEUTRAL_850),
-                selected_background: Background::Color(color::NEUTRAL_750),
+                background: Background::Color(color::SECONDARY),
+                selected_background: Background::Color(color::PRIMARY),
                 selected_text_color: color::TEXT,
                 text_color: color::TEXT,
-                border: BORDER.color(color::NEUTRAL_900),
+                border: BORDER.color(color::SECONDARY_STRONG),
                 shadow: Default::default(),
             })
             .width(Length::Fill)
